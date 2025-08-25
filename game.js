@@ -54,21 +54,28 @@ window.addEventListener('keyup', (e) => keys[e.key] = false);
 function movePlayer() {
   if (paused) return;
 
+  // teclado
   if (keys['ArrowUp'] || keys['w']) playerPosition.y -= playerSpeed;
   if (keys['ArrowDown'] || keys['s']) playerPosition.y += playerSpeed;
   if (keys['ArrowLeft'] || keys['a']) playerPosition.x -= playerSpeed;
   if (keys['ArrowRight'] || keys['d']) playerPosition.x += playerSpeed;
 
+  // joystick
+  if (joystickVector.x !== 0 || joystickVector.y !== 0) {
+    playerPosition.x += joystickVector.x * playerSpeed;
+    playerPosition.y += joystickVector.y * playerSpeed;
+  }
+
   player.style.left = `${playerPosition.x}px`;
   player.style.top = `${playerPosition.y}px`;
 
-  if (keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight']) {
+  if (keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'] || joystickVector.x !== 0 || joystickVector.y !== 0) {
     player.classList.add('bounce');
   } else {
     player.classList.remove('bounce');
   }
 
-  if (keys['ArrowLeft'] || keys['a']) {
+  if (keys['ArrowLeft'] || keys['a'] || joystickVector.x < 0) {
     player.classList.add('flip');
   } else {
     player.classList.remove('flip');
@@ -130,7 +137,7 @@ function moveEnemies() {
   });
 }
 
-// --- Disparo hacia el puntero (clic mantenido) ---
+// --- Disparo hacia el puntero (PC) ---
 let mouseDown = false;
 let lastMouseX = 0, lastMouseY = 0;
 
@@ -154,7 +161,7 @@ window.addEventListener("mouseup", (e) => {
   }
 });
 
-// Disparo continuo mientras el botón esté presionado
+// Disparo continuo (PC)
 function fireBallContinuous() {
   if (paused) return;
   if (!mouseDown) return;
@@ -184,7 +191,7 @@ function fireBall(event) {
   let traveled = 0;
 
   const fireInterval = setInterval(() => {
-    if (paused) return; // <<--- se congela el proyectil también
+    if (paused) return;
 
     const x = parseInt(fireBall.style.left) + Math.cos(angle) * speed;
     const y = parseInt(fireBall.style.top) + Math.sin(angle) * speed;
@@ -296,6 +303,79 @@ gameContainer.addEventListener('wheel', (e) => {
   zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
   zoomLevel = Math.max(0.5, Math.min(zoomLevel, 2));
 });
+
+// --- Joystick virtual (móvil) ---
+let joystickContainer = document.createElement("div");
+joystickContainer.id = "joystickContainer";
+let joystick = document.createElement("div");
+joystick.id = "joystick";
+joystickContainer.appendChild(joystick);
+document.body.appendChild(joystickContainer);
+
+let joystickVector = { x: 0, y: 0 };
+let touchId = null;
+
+joystickContainer.addEventListener("touchstart", (e) => {
+  if (touchId !== null) return;
+  touchId = e.changedTouches[0].identifier;
+});
+
+joystickContainer.addEventListener("touchmove", (e) => {
+  for (let t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      let rect = joystickContainer.getBoundingClientRect();
+      let centerX = rect.left + rect.width / 2;
+      let centerY = rect.top + rect.height / 2;
+      let dx = t.clientX - centerX;
+      let dy = t.clientY - centerY;
+      let dist = Math.sqrt(dx*dx + dy*dy);
+      let maxDist = rect.width/2 - 20;
+      if (dist > maxDist) {
+        dx = dx / dist * maxDist;
+        dy = dy / dist * maxDist;
+      }
+      joystick.style.transform = `translate(${dx}px, ${dy}px)`;
+      joystickVector.x = dx / maxDist;
+      joystickVector.y = dy / maxDist;
+    }
+  }
+});
+
+joystickContainer.addEventListener("touchend", (e) => {
+  for (let t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      joystick.style.transform = "translate(-50%, -50%)";
+      joystickVector = { x: 0, y: 0 };
+      touchId = null;
+    }
+  }
+});
+
+// --- Disparo automático en móvil ---
+function autoFireMobile() {
+  if (paused) return;
+  if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+    let nearest = null;
+    let minDist = Infinity;
+    for (let enemy of enemies) {
+      let dx = enemy.position.x - playerPosition.x;
+      let dy = enemy.position.y - playerPosition.y;
+      let dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = enemy;
+      }
+    }
+    if (nearest && minDist < 400) {
+      fireBall({
+        clientX: nearest.position.x + cameraX,
+        clientY: nearest.position.y + cameraY
+      });
+    }
+  }
+  setTimeout(autoFireMobile, 150);
+}
+autoFireMobile();
 
 // --- Bucle ---
 function gameLoop() {
