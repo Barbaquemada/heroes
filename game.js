@@ -294,7 +294,7 @@ gameContainer.addEventListener('wheel', (e) => {
   zoomLevel = Math.max(0.5, Math.min(zoomLevel, 2));
 });
 
-// --- Joystick móvil fijo ---
+// --- Joystick móvil dinámico ---
 let joystickContainer = document.createElement("div");
 let joystick = document.createElement("div");
 joystickContainer.id = "joystickContainer";
@@ -302,44 +302,61 @@ joystick.id = "joystick";
 joystickContainer.appendChild(joystick);
 document.body.appendChild(joystickContainer);
 
+// estilo inicial oculto
 joystickContainer.style.position = "fixed";
-joystickContainer.style.bottom = "20px";
-joystickContainer.style.right = "20px";
-joystickContainer.style.width = "100px";
-joystickContainer.style.height = "100px";
+joystickContainer.style.width = "140px";
+joystickContainer.style.height = "140px";
 joystickContainer.style.background = "rgba(0,0,0,0.3)";
+joystickContainer.style.border = "2px solid gold";
 joystickContainer.style.borderRadius = "50%";
-joystickContainer.style.display = "flex";
+joystickContainer.style.display = "none"; // invisible hasta tocar
 joystickContainer.style.alignItems = "center";
 joystickContainer.style.justifyContent = "center";
 joystickContainer.style.touchAction = "none";
+joystickContainer.style.zIndex = "5000";
 
-joystick.style.width = "50px";
-joystick.style.height = "50px";
-joystick.style.background = "rgba(255,255,255,0.6)";
+joystick.style.width = "60px";
+joystick.style.height = "60px";
+joystick.style.background = "gold";
 joystick.style.borderRadius = "50%";
-joystick.style.transform = "translate(-50%, -50%)"; 
+joystick.style.position = "absolute";
+joystick.style.left = "50%";
+joystick.style.top = "50%";
+joystick.style.transform = "translate(-50%, -50%)";
+joystick.style.touchAction = "none";
 
 let joystickVector = { x: 0, y: 0 };
 let touchId = null;
 
-joystickContainer.addEventListener("touchstart", (e) => {
+// Aparece joystick donde toques
+window.addEventListener("touchstart", (e) => {
   if (touchId !== null) return;
-  touchId = e.changedTouches[0].identifier;
-  updateJoystickVector(e.changedTouches[0]);
+  let t = e.changedTouches[0];
+  touchId = t.identifier;
+  
+  // posiciona el joystick dentro de la pantalla
+  let x = Math.min(window.innerWidth - 70, Math.max(70, t.clientX));
+  let y = Math.min(window.innerHeight - 70, Math.max(70, t.clientY));
+  
+  joystickContainer.style.left = `${x - 70}px`;  // centro del contenedor
+  joystickContainer.style.top = `${y - 70}px`;
+  joystickContainer.style.display = "flex";
+
+  updateJoystickVector(t);
 });
 
-joystickContainer.addEventListener("touchmove", (e) => {
+window.addEventListener("touchmove", (e) => {
   for (let t of e.changedTouches) {
     if (t.identifier === touchId) updateJoystickVector(t);
   }
 });
 
-joystickContainer.addEventListener("touchend", (e) => {
+window.addEventListener("touchend", (e) => {
   for (let t of e.changedTouches) {
     if (t.identifier === touchId) {
       joystickVector = { x: 0, y: 0 };
       touchId = null;
+      joystickContainer.style.display = "none"; // desaparece al soltar
     }
   }
 });
