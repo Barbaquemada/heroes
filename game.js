@@ -169,7 +169,7 @@ window.addEventListener("mouseup", (e) => {
 });
 
 function fireBallContinuous() {
-  if (paused) return;
+  if (paused || gameOver) return;
   if (!mouseDown) return;
   fireBall({ button: 0, clientX: lastMouseX, clientY: lastMouseY });
   setTimeout(fireBallContinuous, 150);
@@ -261,13 +261,18 @@ function showDamage(enemy, amount) {
 }
 
 // --- Daño al jugador ---
+let gameOver = false;
+
 function takeDamage(amount) {
-  if (paused) return;
+  if (paused || gameOver) return;
 
   playerHP -= amount;
   if (playerHP <= 0) {
+    gameOver = true;  // marca el juego como terminado
+    paused = true;    // pausa cualquier movimiento
     alert("¡Has sido derrotado!");
     window.location.reload();
+    return;
   }
   player.classList.add("hit");
   setTimeout(() => player.classList.remove("hit"), 200);
@@ -374,7 +379,7 @@ function updateJoystickVector(touch) {
 
 // --- Disparo automático en móvil ---
 function autoFireMobile() {
-  if (paused) return;
+  if (paused || gameOver) return;
   if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
     let nearest = null;
     let minDist = Infinity;
@@ -400,7 +405,7 @@ autoFireMobile();
 
 // --- Bucle principal ---
 function gameLoop() {
-  if (!paused) {
+  if (!paused && !gameOver) {
     movePlayer();
     updateCamera();
   }
