@@ -3,6 +3,7 @@ body, html {
   padding: 0;
   height: 100%;
   overflow: hidden;
+  background-color: #2C2F33;
 }
 
 #gameContainer {
@@ -118,7 +119,7 @@ body, html {
   #joystickContainer {
     position: fixed;
     bottom: 80px;
-    left: 80px;
+    right: 80px;
     width: 140px;
     height: 140px;
     background: rgba(0,0,0,0.3);
