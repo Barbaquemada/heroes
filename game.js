@@ -51,62 +51,68 @@ let keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
+// --- Configuración del tablero fijo ---
+const CELL_SIZE = 50; // tamaño de cada celda en px
+const GRID_COLS = 50;
+const GRID_ROWS = 50;
+const BOARD_WIDTH = CELL_SIZE * GRID_COLS;
+const BOARD_HEIGHT = CELL_SIZE * GRID_ROWS;
+
+gameContainer.style.width = BOARD_WIDTH + "px";
+gameContainer.style.height = BOARD_HEIGHT + "px";
+gameContainer.style.position = "relative";
+gameContainer.style.backgroundColor = "#222";
+gameContainer.style.overflow = "hidden";
+
+// --- Movimiento del jugador limitado al tablero ---
 function movePlayer() {
   if (paused) return;
 
-  // teclado
-  if (keys['ArrowUp'] || keys['w']) playerPosition.y -= playerSpeed;
-  if (keys['ArrowDown'] || keys['s']) playerPosition.y += playerSpeed;
-  if (keys['ArrowLeft'] || keys['a']) playerPosition.x -= playerSpeed;
-  if (keys['ArrowRight'] || keys['d']) playerPosition.x += playerSpeed;
+  let dx = 0, dy = 0;
 
-  // joystick
-  if (joystickVector.x !== 0 || joystickVector.y !== 0) {
-    playerPosition.x += joystickVector.x * playerSpeed;
-    playerPosition.y += joystickVector.y * playerSpeed;
-  }
+  if (keys['ArrowUp'] || keys['w']) dy -= playerSpeed;
+  if (keys['ArrowDown'] || keys['s']) dy += playerSpeed;
+  if (keys['ArrowLeft'] || keys['a']) dx -= playerSpeed;
+  if (keys['ArrowRight'] || keys['d']) dx += playerSpeed;
+
+  dx += joystickVector.x * playerSpeed;
+  dy += joystickVector.y * playerSpeed;
+
+  // Limitar al tablero
+  playerPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, playerPosition.x + dx));
+  playerPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, playerPosition.y + dy));
 
   player.style.left = `${playerPosition.x}px`;
   player.style.top = `${playerPosition.y}px`;
 
-  if (keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'] || joystickVector.x !== 0 || joystickVector.y !== 0) {
-    player.classList.add('bounce');
-  } else {
-    player.classList.remove('bounce');
-  }
-
-  if (keys['ArrowLeft'] || keys['a'] || joystickVector.x < 0) {
-    player.classList.add('flip');
-  } else {
-    player.classList.remove('flip');
-  }
+  if (dx !== 0 || dy !== 0) player.classList.add('bounce'); else player.classList.remove('bounce');
+  if (dx < 0) player.classList.add('flip'); else player.classList.remove('flip');
 
   spawnEnemy();
   moveEnemies();
 }
 
-// MUCHOS más enemigos
+// --- Enemigos ---
 function spawnEnemy() {
   if (paused) return;
 
-  if (Math.random() < 0.12) {  
+  if (Math.random() < 0.8) {
+    const spawnDist = 200; 
+    let ex, ey;
+    do {
+      ex = Math.random() * (BOARD_WIDTH - 50);
+      ey = Math.random() * (BOARD_HEIGHT - 50);
+    } while (Math.abs(ex - playerPosition.x) < spawnDist && Math.abs(ey - playerPosition.y) < spawnDist);
+
     let enemy = document.createElement('div');
     enemy.classList.add('enemy');
     enemy.style.backgroundImage = 'url("monstruo.svg")';
     enemy.style.backgroundSize = 'cover';
-
-    let side = Math.floor(Math.random() * 4);
-    let enemyPosition = { x: 0, y: 0 };
-    if (side === 0) { enemyPosition.x = Math.random() * gameContainer.offsetWidth; enemyPosition.y = -50; }
-    else if (side === 1) { enemyPosition.x = Math.random() * gameContainer.offsetWidth; enemyPosition.y = gameContainer.offsetHeight + 50; }
-    else if (side === 2) { enemyPosition.x = -50; enemyPosition.y = Math.random() * gameContainer.offsetHeight; }
-    else { enemyPosition.x = gameContainer.offsetWidth + 50; enemyPosition.y = Math.random() * gameContainer.offsetHeight; }
-
-    enemy.style.left = `${enemyPosition.x}px`;
-    enemy.style.top = `${enemyPosition.y}px`;
+    enemy.style.left = ex + "px";
+    enemy.style.top = ey + "px";
     gameContainer.appendChild(enemy);
 
-    enemies.push({ element: enemy, position: enemyPosition, hp: 50 });
+    enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: 50 });
   }
 }
 
@@ -127,12 +133,13 @@ function moveEnemies() {
       enemyPosition.x += Math.cos(angle) * enemySpeed;
       enemyPosition.y += Math.sin(angle) * enemySpeed;
 
+      enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
+      enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
+
       enemy.element.style.left = `${enemyPosition.x}px`;
       enemy.element.style.top = `${enemyPosition.y}px`;
 
-      if (distance < 40) {
-        takeDamage(5);
-      }
+      if (distance < 40) takeDamage(5);
     }
   });
 }
@@ -161,7 +168,6 @@ window.addEventListener("mouseup", (e) => {
   }
 });
 
-// Disparo continuo (PC)
 function fireBallContinuous() {
   if (paused) return;
   if (!mouseDown) return;
@@ -272,28 +278,12 @@ function updateHUD() {
   killCounter.innerText = `Enemigos derrotados: ${killCount} | Vida: ${playerHP}`;
 }
 
-// --- Cámara dinámica ---
+// --- Cámara centrada ---
 let cameraX = 0;
 let cameraY = 0;
-
 function updateCamera() {
-  if (paused) return;
-
-  let dirX = 0, dirY = 0;
-  if (keys['ArrowUp'] || keys['w']) dirY -= 1;
-  if (keys['ArrowDown'] || keys['s']) dirY += 1;
-  if (keys['ArrowLeft'] || keys['a']) dirX -= 1;
-  if (keys['ArrowRight'] || keys['d']) dirX += 1;
-
-  let offsetX = dirX * 100;
-  let offsetY = dirY * 60;
-
-  let targetX = -playerPosition.x + window.innerWidth / (2 * zoomLevel) - 25 + offsetX;
-  let targetY = -playerPosition.y + window.innerHeight / (2 * zoomLevel) - 25 + offsetY;
-
-  cameraX += (targetX - cameraX) * 0.1;
-  cameraY += (targetY - cameraY) * 0.1;
-
+  cameraX = -playerPosition.x + window.innerWidth / (2 * zoomLevel) - 25;
+  cameraY = -playerPosition.y + window.innerHeight / (2 * zoomLevel) - 25;
   gameContainer.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${zoomLevel})`;
 }
 
@@ -304,13 +294,31 @@ gameContainer.addEventListener('wheel', (e) => {
   zoomLevel = Math.max(0.5, Math.min(zoomLevel, 2));
 });
 
-// --- Joystick virtual (móvil) ---
+// --- Joystick móvil fijo ---
 let joystickContainer = document.createElement("div");
-joystickContainer.id = "joystickContainer";
 let joystick = document.createElement("div");
+joystickContainer.id = "joystickContainer";
 joystick.id = "joystick";
 joystickContainer.appendChild(joystick);
 document.body.appendChild(joystickContainer);
+
+joystickContainer.style.position = "fixed";
+joystickContainer.style.bottom = "20px";
+joystickContainer.style.right = "20px";
+joystickContainer.style.width = "100px";
+joystickContainer.style.height = "100px";
+joystickContainer.style.background = "rgba(0,0,0,0.3)";
+joystickContainer.style.borderRadius = "50%";
+joystickContainer.style.display = "flex";
+joystickContainer.style.alignItems = "center";
+joystickContainer.style.justifyContent = "center";
+joystickContainer.style.touchAction = "none";
+
+joystick.style.width = "50px";
+joystick.style.height = "50px";
+joystick.style.background = "rgba(255,255,255,0.6)";
+joystick.style.borderRadius = "50%";
+joystick.style.transform = "translate(-50%, -50%)"; 
 
 let joystickVector = { x: 0, y: 0 };
 let touchId = null;
@@ -318,38 +326,34 @@ let touchId = null;
 joystickContainer.addEventListener("touchstart", (e) => {
   if (touchId !== null) return;
   touchId = e.changedTouches[0].identifier;
+  updateJoystickVector(e.changedTouches[0]);
 });
 
 joystickContainer.addEventListener("touchmove", (e) => {
   for (let t of e.changedTouches) {
-    if (t.identifier === touchId) {
-      let rect = joystickContainer.getBoundingClientRect();
-      let centerX = rect.left + rect.width / 2;
-      let centerY = rect.top + rect.height / 2;
-      let dx = t.clientX - centerX;
-      let dy = t.clientY - centerY;
-      let dist = Math.sqrt(dx*dx + dy*dy);
-      let maxDist = rect.width/2 - 20;
-      if (dist > maxDist) {
-        dx = dx / dist * maxDist;
-        dy = dy / dist * maxDist;
-      }
-      joystick.style.transform = `translate(${dx}px, ${dy}px)`;
-      joystickVector.x = dx / maxDist;
-      joystickVector.y = dy / maxDist;
-    }
+    if (t.identifier === touchId) updateJoystickVector(t);
   }
 });
 
 joystickContainer.addEventListener("touchend", (e) => {
   for (let t of e.changedTouches) {
     if (t.identifier === touchId) {
-      joystick.style.transform = "translate(-50%, -50%)";
       joystickVector = { x: 0, y: 0 };
       touchId = null;
     }
   }
 });
+
+function updateJoystickVector(touch) {
+  let rect = joystickContainer.getBoundingClientRect();
+  let centerX = rect.left + rect.width / 2;
+  let centerY = rect.top + rect.height / 2;
+  let dx = touch.clientX - centerX;
+  let dy = touch.clientY - centerY;
+  let maxDist = rect.width / 2;
+  joystickVector.x = Math.max(-1, Math.min(1, dx / maxDist));
+  joystickVector.y = Math.max(-1, Math.min(1, dy / maxDist));
+}
 
 // --- Disparo automático en móvil ---
 function autoFireMobile() {
@@ -377,7 +381,7 @@ function autoFireMobile() {
 }
 autoFireMobile();
 
-// --- Bucle ---
+// --- Bucle principal ---
 function gameLoop() {
   if (!paused) {
     movePlayer();
