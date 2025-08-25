@@ -114,3 +114,27 @@ body, html {
 .hit {
   filter: brightness(0.5) saturate(2) hue-rotate(-20deg);
 }
+
+  #joystickContainer {
+    position: fixed;
+    bottom: 80px;
+    left: 80px;
+    width: 140px;
+    height: 140px;
+    background: rgba(0,0,0,0.3);
+    border: 2px solid gold;
+    border-radius: 50%;
+    z-index: 5000;
+    touch-action: none;
+  }
+  #joystick {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 60px;
+    height: 60px;
+    background: gold;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    touch-action: none;
+  }
