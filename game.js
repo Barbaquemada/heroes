@@ -393,27 +393,34 @@ function updateJoystickVector(touch) {
 
 // --- Disparo automático en móvil ---
 function autoFireMobile() {
-  if (paused || gameOver) return;
-  if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-    let nearest = null;
-    let minDist = Infinity;
-    for (let enemy of enemies) {
-      let dx = enemy.position.x - playerPosition.x;
-      let dy = enemy.position.y - playerPosition.y;
-      let dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = enemy;
-      }
+    if (paused || gameOver) return;
+    if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        let nearest = null;
+        let minDist = Infinity;
+        for (let enemy of enemies) {
+            let dx = enemy.position.x - playerPosition.x;
+            let dy = enemy.position.y - playerPosition.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = enemy;
+            }
+        }
+        if (nearest && minDist < 400) {
+            // --- CORRECCIÓN AQUÍ ---
+            // Convertimos las coordenadas del enemigo (del mundo)
+            // a coordenadas de la pantalla para que fireBall() pueda usarlas.
+            const enemyX_screen = (nearest.position.x * zoomLevel) + cameraX;
+            const enemyY_screen = (nearest.position.y * zoomLevel) + cameraY;
+
+            fireBall({
+                clientX: enemyX_screen,
+                clientY: enemyY_screen
+            });
+            // --- FIN DE LA CORRECCIÓN ---
+        }
     }
-    if (nearest && minDist < 400) {
-      fireBall({
-        clientX: nearest.position.x + cameraX,
-        clientY: nearest.position.y + cameraY
-      });
-    }
-  }
-  setTimeout(autoFireMobile, 150);
+    setTimeout(autoFireMobile, 150);
 }
 autoFireMobile();
 
