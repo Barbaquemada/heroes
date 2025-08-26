@@ -37,17 +37,6 @@ body, html {
   transform: scaleX(-1);
 }
 
-/* Para la animación de bounce */
-.bounce {
-  animation: bounce 0.5s ease-out;
-}
-
-@keyframes bounce {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0); }
-}
-
 /* Estilo para los enemigos */
 .enemy {
   position: absolute;
