@@ -28,10 +28,10 @@ pauseOverlay.style.display = "none";
 document.body.appendChild(pauseOverlay);
 
 window.addEventListener("keydown", (e) => {
-  if (e.code === "Escape") {
-    paused = !paused;
-    pauseOverlay.style.display = paused ? "block" : "none";
-  }
+  if (e.code === "Escape") {
+    paused = !paused;
+    pauseOverlay.style.display = paused ? "block" : "none";
+  }
 });
 
 // Vidas y marcador
@@ -65,83 +65,91 @@ gameContainer.style.backgroundColor = "#222";
 gameContainer.style.overflow = "hidden";
 
 // --- Movimiento del jugador limitado al tablero ---
+let isFlipped = false; // Variable para rastrear el estado del flip
+
 function movePlayer() {
-  if (paused) return;
+  if (paused) return;
 
-  let dx = 0, dy = 0;
+  let dx = 0, dy = 0;
 
-  if (keys['ArrowUp'] || keys['w']) dy -= playerSpeed;
-  if (keys['ArrowDown'] || keys['s']) dy += playerSpeed;
-  if (keys['ArrowLeft'] || keys['a']) dx -= playerSpeed;
-  if (keys['ArrowRight'] || keys['d']) dx += playerSpeed;
+  if (keys['ArrowUp'] || keys['w']) dy -= playerSpeed;
+  if (keys['ArrowDown'] || keys['s']) dy += playerSpeed;
+  if (keys['ArrowLeft'] || keys['a']) dx -= playerSpeed;
+  if (keys['ArrowRight'] || keys['d']) dx += playerSpeed;
 
-  dx += joystickVector.x * playerSpeed;
-  dy += joystickVector.y * playerSpeed;
+  dx += joystickVector.x * playerSpeed;
+  dy += joystickVector.y * playerSpeed;
 
-  // Limitar al tablero
-  playerPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, playerPosition.x + dx));
-  playerPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, playerPosition.y + dy));
+  // Limitar al tablero
+  playerPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, playerPosition.x + dx));
+  playerPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, playerPosition.y + dy));
 
-  player.style.left = `${playerPosition.x}px`;
-  player.style.top = `${playerPosition.y}px`;
+  player.style.left = `${playerPosition.x}px`;
+  player.style.top = `${playerPosition.y}px`;
 
-  if (dx !== 0 || dy !== 0) player.classList.add('bounce'); else player.classList.remove('bounce');
-  if (dx < 0) player.classList.add('flip'); else player.classList.remove('flip');
+  // Lógica para el flip
+  if (dx < 0 && !isFlipped) {
+    player.classList.add('flip');
+    isFlipped = true;
+  } else if (dx > 0 && isFlipped) {
+    player.classList.remove('flip');
+    isFlipped = false;
+  }
 
-  spawnEnemy();
-  moveEnemies();
+  spawnEnemy();
+  moveEnemies();
 }
 
 // --- Enemigos ---
 function spawnEnemy() {
-  if (paused) return;
+  if (paused) return;
 
-  if (Math.random() < 0.8) {
-    const spawnDist = 200; 
-    let ex, ey;
-    do {
-      ex = Math.random() * (BOARD_WIDTH - 50);
-      ey = Math.random() * (BOARD_HEIGHT - 50);
-    } while (Math.abs(ex - playerPosition.x) < spawnDist && Math.abs(ey - playerPosition.y) < spawnDist);
+  if (Math.random() < 0.8) {
+    const spawnDist = 200; 
+    let ex, ey;
+    do {
+      ex = Math.random() * (BOARD_WIDTH - 50);
+      ey = Math.random() * (BOARD_HEIGHT - 50);
+    } while (Math.abs(ex - playerPosition.x) < spawnDist && Math.abs(ey - playerPosition.y) < spawnDist);
 
-    let enemy = document.createElement('div');
-    enemy.classList.add('enemy');
-    enemy.style.backgroundImage = 'url("monstruo.svg")';
-    enemy.style.backgroundSize = 'cover';
-    enemy.style.left = ex + "px";
-    enemy.style.top = ey + "px";
-    gameContainer.appendChild(enemy);
+    let enemy = document.createElement('div');
+    enemy.classList.add('enemy');
+    enemy.style.backgroundImage = 'url("monstruo.svg")';
+    enemy.style.backgroundSize = 'cover';
+    enemy.style.left = ex + "px";
+    enemy.style.top = ey + "px";
+    gameContainer.appendChild(enemy);
 
-    enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: 50 });
-  }
+    enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: 50 });
+  }
 }
 
 function moveEnemies() {
-  if (paused) return;
+  if (paused) return;
 
-  enemies.forEach(enemy => {
-    let enemyPosition = enemy.position;
-    let deltaX = playerPosition.x - enemyPosition.x;
-    let deltaY = playerPosition.y - enemyPosition.y;
-    let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+  enemies.forEach(enemy => {
+    let enemyPosition = enemy.position;
+    let deltaX = playerPosition.x - enemyPosition.x;
+    let deltaY = playerPosition.y - enemyPosition.y;
+    let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-    if (distance > enemyDistanceThreshold) {
-      enemy.element.remove();
-      enemies = enemies.filter(e => e !== enemy);
-    } else {
-      let angle = Math.atan2(deltaY, deltaX);
-      enemyPosition.x += Math.cos(angle) * enemySpeed;
-      enemyPosition.y += Math.sin(angle) * enemySpeed;
+    if (distance > enemyDistanceThreshold) {
+      enemy.element.remove();
+      enemies = enemies.filter(e => e !== enemy);
+    } else {
+      let angle = Math.atan2(deltaY, deltaX);
+      enemyPosition.x += Math.cos(angle) * enemySpeed;
+      enemyPosition.y += Math.sin(angle) * enemySpeed;
 
-      enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
-      enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
+      enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
+      enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
 
-      enemy.element.style.left = `${enemyPosition.x}px`;
-      enemy.element.style.top = `${enemyPosition.y}px`;
+      enemy.element.style.left = `${enemyPosition.x}px`;
+      enemy.element.style.top = `${enemyPosition.y}px`;
 
-      if (distance < 40) takeDamage(5);
-    }
-  });
+      if (distance < 40) takeDamage(5);
+    }
+  });
 }
 
 // --- Disparo hacia el puntero (PC) ---
@@ -149,139 +157,139 @@ let mouseDown = false;
 let lastMouseX = 0, lastMouseY = 0;
 
 window.addEventListener("mousemove", (e) => {
-  lastMouseX = e.clientX;
-  lastMouseY = e.clientY;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
 });
 
 window.addEventListener("mousedown", (e) => {
-  if (paused) return;
-  if (e.button === 0 || e.button === 2) {
-    e.preventDefault(); 
-    mouseDown = true;
-    fireBallContinuous();
-  }
+  if (paused) return;
+  if (e.button === 0 || e.button === 2) {
+    e.preventDefault(); 
+    mouseDown = true;
+    fireBallContinuous();
+  }
 });
 
 window.addEventListener("mouseup", (e) => {
-  if (e.button === 0 || e.button === 2) {
-    mouseDown = false;
-  }
+  if (e.button === 0 || e.button === 2) {
+    mouseDown = false;
+  }
 });
 
 function fireBallContinuous() {
-  if (paused || gameOver) return;
-  if (!mouseDown) return;
-  fireBall({ button: 0, clientX: lastMouseX, clientY: lastMouseY });
-  setTimeout(fireBallContinuous, 150);
+  if (paused || gameOver) return;
+  if (!mouseDown) return;
+  fireBall({ button: 0, clientX: lastMouseX, clientY: lastMouseY });
+  setTimeout(fireBallContinuous, 150);
 }
 
 function fireBall(event) {
-  if (paused) return;
+  if (paused) return;
 
-  const fireBall = document.createElement('div');
-  fireBall.classList.add('fireball');
-  fireBall.style.left = `${playerPosition.x + 15}px`;
-  fireBall.style.top = `${playerPosition.y + 15}px`;
-  gameContainer.appendChild(fireBall);
+  const fireBall = document.createElement('div');
+  fireBall.classList.add('fireball');
+  fireBall.style.left = `${playerPosition.x + 15}px`;
+  fireBall.style.top = `${playerPosition.y + 15}px`;
+  gameContainer.appendChild(fireBall);
 
-  const rect = gameContainer.getBoundingClientRect();
-  const mouseX_world = (event.clientX - rect.left) / zoomLevel;
-  const mouseY_world = (event.clientY - rect.top) / zoomLevel;
+  const rect = gameContainer.getBoundingClientRect();
+  const mouseX_world = (event.clientX - rect.left) / zoomLevel;
+  const mouseY_world = (event.clientY - rect.top) / zoomLevel;
 
-  const dx = mouseX_world - (playerPosition.x + 25);
-  const dy = mouseY_world - (playerPosition.y + 25);
-  const angle = Math.atan2(dy, dx);
+  const dx = mouseX_world - (playerPosition.x + 25);
+  const dy = mouseY_world - (playerPosition.y + 25);
+  const angle = Math.atan2(dy, dx);
 
-  const speed = 10;
-  const maxDamage = 40;
-  const range = 500;
-  let traveled = 0;
+  const speed = 10;
+  const maxDamage = 40;
+  const range = 500;
+  let traveled = 0;
 
-  const fireInterval = setInterval(() => {
-    if (paused) return;
+  const fireInterval = setInterval(() => {
+    if (paused) return;
 
-    const x = parseInt(fireBall.style.left) + Math.cos(angle) * speed;
-    const y = parseInt(fireBall.style.top) + Math.sin(angle) * speed;
-    fireBall.style.left = `${x}px`;
-    fireBall.style.top = `${y}px`;
-    traveled += speed;
+    const x = parseInt(fireBall.style.left) + Math.cos(angle) * speed;
+    const y = parseInt(fireBall.style.top) + Math.sin(angle) * speed;
+    fireBall.style.left = `${x}px`;
+    fireBall.style.top = `${y}px`;
+    traveled += speed;
 
-    for (let enemy of enemies) {
-      const dx = x - enemy.position.x;
-      const dy = y - enemy.position.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 40) {
-        explode(fireBall, enemy, maxDamage);
-        clearInterval(fireInterval);
-        return;
-      }
-    }
+    for (let enemy of enemies) {
+      const dx = x - enemy.position.x;
+      const dy = y - enemy.position.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 40) {
+        explode(fireBall, enemy, maxDamage);
+        clearInterval(fireInterval);
+        return;
+      }
+    }
 
-    if (traveled > range) {
-      fireBall.remove();
-      clearInterval(fireInterval);
-    }
-  }, 30);
+    if (traveled > range) {
+      fireBall.remove();
+      clearInterval(fireInterval);
+    }
+  }, 30);
 }
 
 function explode(fireBall, enemy, damage) {
-  if (paused) return;
+  if (paused) return;
 
-  const explosion = document.createElement("div");
-  explosion.classList.add("explosion");
-  explosion.style.left = fireBall.style.left;
-  explosion.style.top = fireBall.style.top;
-  gameContainer.appendChild(explosion);
-  setTimeout(() => explosion.remove(), 500);
+  const explosion = document.createElement("div");
+  explosion.classList.add("explosion");
+  explosion.style.left = fireBall.style.left;
+  explosion.style.top = fireBall.style.top;
+  gameContainer.appendChild(explosion);
+  setTimeout(() => explosion.remove(), 500);
 
-  enemy.hp -= damage;
-  showDamage(enemy, damage);
-  if (enemy.hp <= 0) {
-    enemy.element.remove();
-    enemies = enemies.filter(e => e !== enemy);
-    killCount++;
-    updateHUD();
-  }
+  enemy.hp -= damage;
+  showDamage(enemy, damage);
+  if (enemy.hp <= 0) {
+    enemy.element.remove();
+    enemies = enemies.filter(e => e !== enemy);
+    killCount++;
+    updateHUD();
+  }
 
-  fireBall.remove();
+  fireBall.remove();
 }
 
 // --- Numeritos flotantes ---
 function showDamage(enemy, amount) {
-  if (paused) return;
+  if (paused) return;
 
-  const dmg = document.createElement("div");
-  dmg.classList.add("damage-text");
-  dmg.innerText = `-${amount}`;
-  gameContainer.appendChild(dmg);
+  const dmg = document.createElement("div");
+  dmg.classList.add("damage-text");
+  dmg.innerText = `-${amount}`;
+  gameContainer.appendChild(dmg);
 
-  dmg.style.left = `${enemy.position.x + 10}px`;
-  dmg.style.top = `${enemy.position.y - 10}px`;
+  dmg.style.left = `${enemy.position.x + 10}px`;
+  dmg.style.top = `${enemy.position.y - 10}px`;
 
-  setTimeout(() => dmg.remove(), 800);
+  setTimeout(() => dmg.remove(), 800);
 }
 
 // --- Daño al jugador ---
 let gameOver = false;
 
 function takeDamage(amount) {
-  if (paused || gameOver) return;
+  if (paused || gameOver) return;
 
-  playerHP -= amount;
-  if (playerHP <= 0) {
-    gameOver = true;  // marca el juego como terminado
-    paused = true;    // pausa cualquier movimiento
-    alert("¡Has sido derrotado!");
-    window.location.reload();
-    return;
-  }
-  player.classList.add("hit");
-  setTimeout(() => player.classList.remove("hit"), 200);
-  updateHUD();
+  playerHP -= amount;
+  if (playerHP <= 0) {
+    gameOver = true;  // marca el juego como terminado
+    paused = true;    // pausa cualquier movimiento
+    alert("¡Has sido derrotado!");
+    window.location.reload();
+    return;
+  }
+  player.classList.add("hit");
+  setTimeout(() => player.classList.remove("hit"), 200);
+  updateHUD();
 }
 
 function updateHUD() {
-  killCounter.innerText = `Enemigos derrotados: ${killCount} | Vida: ${playerHP}`;
+  killCounter.innerText = `Enemigos derrotados: ${killCount} | Vida: ${playerHP}`;
 }
 
 // --- Cámara centrada ---
@@ -289,28 +297,28 @@ let cameraX = 0;
 let cameraY = 0;
 
 function updateCamera() {
-  // Ajustamos el desplazamiento de la cámara para que el centro de la pantalla
-  // coincida con la posición del jugador, teniendo en cuenta el nivel de zoom.
-  // Los 25px son la mitad del tamaño del jugador (50px).
-  cameraX = -playerPosition.x * zoomLevel + window.innerWidth / 2 - 25 * zoomLevel;
-  cameraY = -playerPosition.y * zoomLevel + window.innerHeight / 2 - 25 * zoomLevel;
-  
-  gameContainer.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${zoomLevel})`;
+  // Ajustamos el desplazamiento de la cámara para que el centro de la pantalla
+  // coincida con la posición del jugador, teniendo en cuenta el nivel de zoom.
+  // Los 25px son la mitad del tamaño del jugador (50px).
+  cameraX = -playerPosition.x * zoomLevel + window.innerWidth / 2 - 25 * zoomLevel;
+  cameraY = -playerPosition.y * zoomLevel + window.innerHeight / 2 - 25 * zoomLevel;
+  
+  gameContainer.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${zoomLevel})`;
 }
 
 // --- Zoom ---
 gameContainer.addEventListener('wheel', (e) => {
-  if (paused) return;
-  e.preventDefault(); // Evita el scroll de la página
+  if (paused) return;
+  e.preventDefault(); // Evita el scroll de la página
 
-  const oldZoomLevel = zoomLevel;
-  
-  // Cambiamos el nivel de zoom.
-  zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
-  zoomLevel = Math.max(0.5, Math.min(zoomLevel, 2));
+  const oldZoomLevel = zoomLevel;
+  
+  // Cambiamos el nivel de zoom.
+  zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
+  zoomLevel = Math.max(0.5, Math.min(zoomLevel, 10));
 
-  // Recalculamos la posición de la cámara inmediatamente después del zoom.
-  updateCamera();
+  // Recalculamos la posición de la cámara inmediatamente después del zoom.
+  updateCamera();
 });
 
 // --- Joystick móvil dinámico ---
@@ -349,88 +357,84 @@ let touchId = null;
 
 // Aparece joystick donde toques
 window.addEventListener("touchstart", (e) => {
-  if (touchId !== null) return;
-  let t = e.changedTouches[0];
-  touchId = t.identifier;
-  
-  // posiciona el joystick dentro de la pantalla
-  let x = Math.min(window.innerWidth - 70, Math.max(70, t.clientX));
-  let y = Math.min(window.innerHeight - 70, Math.max(70, t.clientY));
-  
-  joystickContainer.style.left = `${x - 70}px`;  // centro del contenedor
-  joystickContainer.style.top = `${y - 70}px`;
-  joystickContainer.style.display = "flex";
+  if (touchId !== null) return;
+  let t = e.changedTouches[0];
+  touchId = t.identifier;
+  
+  // posiciona el joystick dentro de la pantalla
+  let x = Math.min(window.innerWidth - 70, Math.max(70, t.clientX));
+  let y = Math.min(window.innerHeight - 70, Math.max(70, t.clientY));
+  
+  joystickContainer.style.left = `${x - 70}px`;  // centro del contenedor
+  joystickContainer.style.top = `${y - 70}px`;
+  joystickContainer.style.display = "flex";
 
-  updateJoystickVector(t);
+  updateJoystickVector(t);
 });
 
 window.addEventListener("touchmove", (e) => {
-  for (let t of e.changedTouches) {
-    if (t.identifier === touchId) updateJoystickVector(t);
-  }
+  for (let t of e.changedTouches) {
+    if (t.identifier === touchId) updateJoystickVector(t);
+  }
 });
 
 window.addEventListener("touchend", (e) => {
-  for (let t of e.changedTouches) {
-    if (t.identifier === touchId) {
-      joystickVector = { x: 0, y: 0 };
-      touchId = null;
-      joystickContainer.style.display = "none"; // desaparece al soltar
-    }
-  }
+  for (let t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      joystickVector = { x: 0, y: 0 };
+      touchId = null;
+      joystickContainer.style.display = "none"; // desaparece al soltar
+    }
+  }
 });
 
 function updateJoystickVector(touch) {
-  let rect = joystickContainer.getBoundingClientRect();
-  let centerX = rect.left + rect.width / 2;
-  let centerY = rect.top + rect.height / 2;
-  let dx = touch.clientX - centerX;
-  let dy = touch.clientY - centerY;
-  let maxDist = rect.width / 2;
-  joystickVector.x = Math.max(-1, Math.min(1, dx / maxDist));
-  joystickVector.y = Math.max(-1, Math.min(1, dy / maxDist));
+  let rect = joystickContainer.getBoundingClientRect();
+  let centerX = rect.left + rect.width / 2;
+  let centerY = rect.top + rect.height / 2;
+  let dx = touch.clientX - centerX;
+  let dy = touch.clientY - centerY;
+  let maxDist = rect.width / 2;
+  joystickVector.x = Math.max(-1, Math.min(1, dx / maxDist));
+  joystickVector.y = Math.max(-1, Math.min(1, dy / maxDist));
 }
 
 // --- Disparo automático en móvil ---
 function autoFireMobile() {
-    if (paused || gameOver) return;
-    if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-        let nearest = null;
-        let minDist = Infinity;
-        for (let enemy of enemies) {
-            let dx = enemy.position.x - playerPosition.x;
-            let dy = enemy.position.y - playerPosition.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDist) {
-                minDist = dist;
-                nearest = enemy;
-            }
-        }
-        if (nearest && minDist < 400) {
-            // --- CORRECCIÓN AQUÍ ---
-            // Convertimos las coordenadas del enemigo (del mundo)
-            // a coordenadas de la pantalla para que fireBall() pueda usarlas.
-            const enemyX_screen = (nearest.position.x * zoomLevel) + cameraX;
-            const enemyY_screen = (nearest.position.y * zoomLevel) + cameraY;
+    if (paused || gameOver) return;
+    if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        let nearest = null;
+        let minDist = Infinity;
+        for (let enemy of enemies) {
+            let dx = enemy.position.x - playerPosition.x;
+            let dy = enemy.position.y - playerPosition.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = enemy;
+            }
+        }
+        if (nearest && minDist < 400) {
+            const enemyX_screen = (nearest.position.x * zoomLevel) + cameraX;
+            const enemyY_screen = (nearest.position.y * zoomLevel) + cameraY;
 
-            fireBall({
-                clientX: enemyX_screen,
-                clientY: enemyY_screen
-            });
-            // --- FIN DE LA CORRECCIÓN ---
-        }
-    }
-    setTimeout(autoFireMobile, 150);
+            fireBall({
+                clientX: enemyX_screen,
+                clientY: enemyY_screen
+            });
+        }
+    }
+    setTimeout(autoFireMobile, 150);
 }
 autoFireMobile();
 
 // --- Bucle principal ---
 function gameLoop() {
-  if (!paused && !gameOver) {
-    movePlayer();
-    updateCamera();
-  }
-  requestAnimationFrame(gameLoop);
+  if (!paused && !gameOver) {
+    movePlayer();
+    updateCamera();
+  }
+  requestAnimationFrame(gameLoop);
 }
 gameLoop();
 
