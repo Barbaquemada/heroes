@@ -184,11 +184,12 @@ function fireBall(event) {
   fireBall.style.top = `${playerPosition.y + 15}px`;
   gameContainer.appendChild(fireBall);
 
-  const mouseX_world = (event.clientX - cameraX) / zoomLevel;
-  const mouseY_world = (event.clientY - cameraY) / zoomLevel;
+  const rect = gameContainer.getBoundingClientRect();
+  const mouseX_world = (event.clientX - rect.left) / zoomLevel;
+  const mouseY_world = (event.clientY - rect.top) / zoomLevel;
 
-  const dx = mouseX_world - playerPosition.x;
-  const dy = mouseY_world - playerPosition.y;
+  const dx = mouseX_world - (playerPosition.x + 25);
+  const dy = mouseY_world - (playerPosition.y + 25);
   const angle = Math.atan2(dy, dx);
 
   const speed = 10;
@@ -286,17 +287,30 @@ function updateHUD() {
 // --- Cámara centrada ---
 let cameraX = 0;
 let cameraY = 0;
+
 function updateCamera() {
-  cameraX = -playerPosition.x + window.innerWidth / (2 * zoomLevel) - 25;
-  cameraY = -playerPosition.y + window.innerHeight / (2 * zoomLevel) - 25;
+  // Ajustamos el desplazamiento de la cámara para que el centro de la pantalla
+  // coincida con la posición del jugador, teniendo en cuenta el nivel de zoom.
+  // Los 25px son la mitad del tamaño del jugador (50px).
+  cameraX = -playerPosition.x * zoomLevel + window.innerWidth / 2 - 25 * zoomLevel;
+  cameraY = -playerPosition.y * zoomLevel + window.innerHeight / 2 - 25 * zoomLevel;
+  
   gameContainer.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${zoomLevel})`;
 }
 
 // --- Zoom ---
 gameContainer.addEventListener('wheel', (e) => {
   if (paused) return;
+  e.preventDefault(); // Evita el scroll de la página
+
+  const oldZoomLevel = zoomLevel;
+  
+  // Cambiamos el nivel de zoom.
   zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
   zoomLevel = Math.max(0.5, Math.min(zoomLevel, 2));
+
+  // Recalculamos la posición de la cámara inmediatamente después del zoom.
+  updateCamera();
 });
 
 // --- Joystick móvil dinámico ---
