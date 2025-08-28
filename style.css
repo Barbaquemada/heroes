@@ -4,7 +4,7 @@ body, html {
   height: 100%;
   overflow: hidden;
   background-color: #2C2F33;
-  font-family: 'Roboto Mono', monospace; /* Aplicado a todo el cuerpo */
+  font-family: 'Roboto Mono', monospace;
 }
 
 #gameContainer {
@@ -114,8 +114,8 @@ body, html {
   position: fixed;
   top: 15px;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-direction: column; /* Esto es clave para que los elementos dentro se apilen */
+  gap: 10px; /* Espacio entre los bloques */
   z-index: 1000;
 }
 
@@ -140,9 +140,18 @@ body, html {
   white-space: nowrap;
   min-width: 100px;
   text-align: center;
-  font-family: 'Roboto Mono', monospace; /* Fuente explícita */
+  font-family: 'Roboto Mono', monospace;
 }
 
+/* Estilos para los grupos de botones de nivel */
+.level-controls { 
+  display: flex;
+  flex-wrap: wrap; /* Permite que los botones salten de línea */
+  gap: 10px;
+  align-items: center; /* Centra verticalmente los elementos */
+}
+
+/* Asegura que el selector de personaje no se mezcle */
 #characterSelector {
   padding: 8px 15px;
   background: rgba(0, 0, 0, 0.7);
@@ -154,13 +163,8 @@ body, html {
   cursor: pointer;
   z-index: 1000;
   transition: transform 0.2s ease-in-out;
-  font-family: 'Roboto Mono', monospace; /* Fuente explícita */
-}
-
-.level-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  font-family: 'Roboto Mono', monospace;
+  white-space: nowrap; /* Evita que el texto del botón se rompa */
 }
 
 .level-button {
@@ -173,7 +177,7 @@ body, html {
   font-weight: bold;
   cursor: pointer;
   transition: transform 0.2s ease-in-out;
-  font-family: 'Roboto Mono', monospace; /* Fuente explícita */
+  font-family: 'Roboto Mono', monospace;
 }
 
 .level-button:hover, #characterSelector:hover {
@@ -190,5 +194,5 @@ body, html {
   font-weight: bold;
   text-align: center;
   min-width: 90px;
-  font-family: 'Roboto Mono', monospace; /* Fuente explícita */
+  font-family: 'Roboto Mono', monospace;
 }
