@@ -436,6 +436,22 @@ function autoFireMobile() {
 }
 autoFireMobile();
 
+// --- Lógica para el cambio de personaje ---
+const characterSelector = document.getElementById('characterSelector');
+const playerSprite = document.querySelector('#player img');
+let isMago = true; // El personaje inicial es el Mago
+
+characterSelector.addEventListener('click', () => {
+  if (isMago) {
+    playerSprite.src = "char_mago_f.svg";
+    characterSelector.innerText = "Cambiar a Mago";
+  } else {
+    playerSprite.src = "char_mago_m.svg";
+    characterSelector.innerText = "Cambiar a Hechicera";
+  }
+  isMago = !isMago;
+});
+
 // --- Bucle principal ---
 function gameLoop() {
     if (!paused && !gameOver) {
