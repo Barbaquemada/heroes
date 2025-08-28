@@ -1,12 +1,17 @@
 // Variables del juego
 let player = document.getElementById('player');
 let gameContainer = document.getElementById('gameContainer');
-let playerSpeed = 5;
-let enemySpeed = 2;
 let enemies = [];
-let enemyDistanceThreshold = 500;
 let zoomLevel = 1;
 let paused = false;
+let gameOver = false;
+
+// Variables de vidas y marcador
+let playerHP = 100;
+let killCount = 0;
+let maxPlayerHP = 100;
+let hudLeft = document.getElementById('hudLeft');
+let hudRight = document.getElementById('hudRight');
 
 // Variables para los temporizadores de disparo
 let autoFireTimer;
@@ -14,7 +19,7 @@ let fireBallContinuousTimer;
 
 // --- Overlay de PAUSA ---
 let pauseOverlay = document.createElement("div");
-pauseOverlay.innerText = "⏸ PAUSA";
+pauseOverlay.innerText = "⏸ PAUSE";
 pauseOverlay.style.position = "absolute";
 pauseOverlay.style.top = "50%";
 pauseOverlay.style.left = "50%";
@@ -37,11 +42,9 @@ window.addEventListener("keydown", (e) => {
         pauseOverlay.style.display = paused ? "block" : "none";
 
         if (paused) {
-            // Pausar los temporizadores
             clearTimeout(autoFireTimer);
             clearTimeout(fireBallContinuousTimer);
         } else {
-            // Reanudar los temporizadores
             autoFireMobile();
             if (mouseDown) {
                 fireBallContinuous();
@@ -50,13 +53,8 @@ window.addEventListener("keydown", (e) => {
     }
 });
 
-// Vidas y marcador
-let playerHP = 100;
-let killCount = 0;
-let killCounter = document.createElement('div');
-killCounter.id = "hud";
-killCounter.innerText = `Enemigos derrotados: 0 | Vida: ${playerHP}`;
-document.body.appendChild(killCounter);
+// Actualiza el HUD al iniciar
+updateHUD();
 
 // Posición inicial
 let playerPosition = { x: 200, y: 200 };
@@ -68,7 +66,7 @@ window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
 // --- Configuración del tablero fijo ---
-const CELL_SIZE = 50; // tamaño de cada celda en px
+const CELL_SIZE = 50;
 const GRID_COLS = 50;
 const GRID_ROWS = 50;
 const BOARD_WIDTH = CELL_SIZE * GRID_COLS;
@@ -81,12 +79,13 @@ gameContainer.style.backgroundColor = "#222";
 gameContainer.style.overflow = "hidden";
 
 // --- Movimiento del jugador limitado al tablero ---
-let isFlipped = false; // Variable para rastrear el estado del flip
+let isFlipped = false;
 
 function movePlayer() {
     if (paused) return;
 
     let dx = 0, dy = 0;
+    const playerSpeed = getPlayerSettings(currentPlayerLevel).speed;
 
     if (keys['ArrowUp'] || keys['w']) dy -= playerSpeed;
     if (keys['ArrowDown'] || keys['s']) dy += playerSpeed;
@@ -96,14 +95,12 @@ function movePlayer() {
     dx += joystickVector.x * playerSpeed;
     dy += joystickVector.y * playerSpeed;
 
-    // Limitar al tablero
     playerPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, playerPosition.x + dx));
     playerPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, playerPosition.y + dy));
 
     player.style.left = `${playerPosition.x}px`;
     player.style.top = `${playerPosition.y}px`;
 
-    // Lógica para el flip
     if (dx < 0 && !isFlipped) {
         player.classList.add('flip');
         isFlipped = true;
@@ -116,11 +113,51 @@ function movePlayer() {
     moveEnemies();
 }
 
-// --- Enemigos ---
+// --- Enemigos (Lógica de escalado infinito) ---
+let currentMonsterLevel = 1;
+const monsterLevelDisplay = document.getElementById('monsterLevelDisplay');
+const monsterLevelUpButton = document.getElementById('monsterLevelUp');
+const monsterLevelDownButton = document.getElementById('monsterLevelDown');
+
+function getMonsterSettings(level) {
+    const baseSpeed = 2;
+    const baseHp = 50;
+    const baseSpawnChance = 0.80;
+    const baseDistanceThreshold = 500;
+    const baseMaxEnemies = 100;
+
+    const speed = baseSpeed + (level - 1) * 0.005;
+    const hp = baseHp * (1 + (level - 1) * 0.50);
+    const spawnChance = Math.min(0.5, baseSpawnChance + (level - 1) * 0.05);
+    const distanceThreshold = baseDistanceThreshold + (level - 1) * 50;
+
+    return { speed, hp, spawnChance, distanceThreshold, maxEnemies: baseMaxEnemies };
+}
+
+function updateMonsterLevelDisplay() {
+    monsterLevelDisplay.innerText = `mLevel: ${currentMonsterLevel}`;
+}
+
+monsterLevelUpButton.addEventListener('click', () => {
+    currentMonsterLevel++;
+    updateMonsterLevelDisplay();
+});
+
+monsterLevelDownButton.addEventListener('click', () => {
+    if (currentMonsterLevel > 1) {
+        currentMonsterLevel--;
+        updateMonsterLevelDisplay();
+    }
+});
+
+updateMonsterLevelDisplay();
+
 function spawnEnemy() {
     if (paused) return;
 
-    if (Math.random() < 0.8) {
+    const settings = getMonsterSettings(currentMonsterLevel);
+
+if (enemies.length < settings.maxEnemies && Math.random() < settings.spawnChance) {
         const spawnDist = 200;
         let ex, ey;
         do {
@@ -136,12 +173,14 @@ function spawnEnemy() {
         enemy.style.top = ey + "px";
         gameContainer.appendChild(enemy);
 
-        enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: 50 });
+        enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: settings.hp });
     }
 }
 
 function moveEnemies() {
     if (paused) return;
+
+    const settings = getMonsterSettings(currentMonsterLevel);
 
     enemies.forEach(enemy => {
         let enemyPosition = enemy.position;
@@ -149,13 +188,13 @@ function moveEnemies() {
         let deltaY = playerPosition.y - enemyPosition.y;
         let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-        if (distance > enemyDistanceThreshold) {
+        if (distance > settings.distanceThreshold) {
             enemy.element.remove();
             enemies = enemies.filter(e => e !== enemy);
         } else {
             let angle = Math.atan2(deltaY, deltaX);
-            enemyPosition.x += Math.cos(angle) * enemySpeed;
-            enemyPosition.y += Math.sin(angle) * enemySpeed;
+            enemyPosition.x += Math.cos(angle) * settings.speed;
+            enemyPosition.y += Math.sin(angle) * settings.speed;
 
             enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
             enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
@@ -167,6 +206,57 @@ function moveEnemies() {
         }
     });
 }
+
+// --- Jugador (Lógica de escalado infinito) ---
+let currentPlayerLevel = 1;
+const playerLevelDisplay = document.getElementById('playerLevelDisplay');
+const playerLevelUpButton = document.getElementById('playerLevelUp');
+const playerLevelDownButton = document.getElementById('playerLevelDown');
+
+function getPlayerSettings(level) {
+    const baseSpeed = 5;
+    const baseHp = 100;
+    const baseFireballDamage = 40;
+    const baseFireballSpeed = 10;
+    const baseFireballRange = 500;
+    const baseFireRate = 150;
+
+    const speed = baseSpeed + (level - 1) * 0.005;
+    const maxHp = Math.round(baseHp + (level - 1) * 20);
+    const damage = Math.round(baseFireballDamage + (level - 1) * 50);
+    const fireballSpeed = baseFireballSpeed + (level - 1) * 0.05;
+    const fireballRange = baseFireballRange + (level - 1) * 50;
+    const fireRate = Math.max(50, baseFireRate - (level - 1) * 0.5);
+
+    return { speed, maxHp, damage, fireballSpeed, fireballRange, fireRate };
+}
+
+function updatePlayerLevelDisplay() {
+    const settings = getPlayerSettings(currentPlayerLevel);
+    maxPlayerHP = settings.maxHp;
+    playerLevelDisplay.innerText = `pLevel: ${currentPlayerLevel}`;
+    updateHUD();
+}
+
+playerLevelUpButton.addEventListener('click', () => {
+    currentPlayerLevel++;
+    const settings = getPlayerSettings(currentPlayerLevel);
+    maxPlayerHP = settings.maxHp;
+    playerHP = maxPlayerHP; // Cura la vida al 100%
+    updatePlayerLevelDisplay();
+});
+
+playerLevelDownButton.addEventListener('click', () => {
+    if (currentPlayerLevel > 1) {
+        currentPlayerLevel--;
+        const settings = getPlayerSettings(currentPlayerLevel);
+        maxPlayerHP = settings.maxHp;
+        playerHP = maxPlayerHP; // Cura la vida al 100%
+        updatePlayerLevelDisplay();
+    }
+});
+
+updatePlayerLevelDisplay();
 
 // --- Disparo hacia el puntero (PC) ---
 let mouseDown = false;
@@ -195,11 +285,14 @@ window.addEventListener("mouseup", (e) => {
 function fireBallContinuous() {
     if (paused || gameOver || !mouseDown) return;
     fireBall({ button: 0, clientX: lastMouseX, clientY: lastMouseY });
-    fireBallContinuousTimer = setTimeout(fireBallContinuous, 150);
+    const settings = getPlayerSettings(currentPlayerLevel);
+    fireBallContinuousTimer = setTimeout(fireBallContinuous, settings.fireRate);
 }
 
 function fireBall(event) {
     if (paused) return;
+
+    const settings = getPlayerSettings(currentPlayerLevel);
 
     const fireBall = document.createElement('div');
     fireBall.classList.add('fireball');
@@ -215,9 +308,9 @@ function fireBall(event) {
     const dy = mouseY_world - (playerPosition.y + 25);
     const angle = Math.atan2(dy, dx);
 
-    const speed = 10;
-    const maxDamage = 40;
-    const range = 500;
+    const speed = settings.fireballSpeed;
+    const damage = settings.damage;
+    const range = settings.fireballRange;
     let traveled = 0;
 
     const fireInterval = setInterval(() => {
@@ -234,7 +327,7 @@ function fireBall(event) {
             const dy = y - enemy.position.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 40) {
-                explode(fireBall, enemy, maxDamage);
+                explode(fireBall, enemy, damage);
                 clearInterval(fireInterval);
                 return;
             }
@@ -285,8 +378,6 @@ function showDamage(enemy, amount) {
 }
 
 // --- Daño al jugador ---
-let gameOver = false;
-
 function takeDamage(amount) {
     if (paused || gameOver) return;
 
@@ -294,7 +385,7 @@ function takeDamage(amount) {
     if (playerHP <= 0) {
         gameOver = true;
         paused = true;
-        alert("¡Has sido derrotado!");
+        alert("You have been defeated!");
         window.location.reload();
         return;
     }
@@ -304,7 +395,8 @@ function takeDamage(amount) {
 }
 
 function updateHUD() {
-    killCounter.innerText = `Enemigos derrotados: ${killCount} | Vida: ${playerHP}`;
+    hudLeft.innerText = `❤️ ${playerHP} / ${maxPlayerHP}`;
+    hudRight.innerText = `Monsters Slain: ${killCount}`;
 }
 
 // --- Cámara centrada ---
@@ -369,7 +461,6 @@ window.addEventListener("touchstart", (e) => {
     let t = e.changedTouches[0];
     touchId = t.identifier;
 
-    // posiciona el joystick dentro de la pantalla
     let x = Math.min(window.innerWidth - 70, Math.max(70, t.clientX));
     let y = Math.min(window.innerHeight - 70, Math.max(70, t.clientY));
 
@@ -410,6 +501,7 @@ function updateJoystickVector(touch) {
 // --- Disparo automático en móvil ---
 function autoFireMobile() {
     if (paused || gameOver) return;
+    const settings = getPlayerSettings(currentPlayerLevel);
     if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
         let nearest = null;
         let minDist = Infinity;
@@ -432,22 +524,22 @@ function autoFireMobile() {
             });
         }
     }
-    autoFireTimer = setTimeout(autoFireMobile, 150);
+    autoFireTimer = setTimeout(autoFireMobile, settings.fireRate);
 }
 autoFireMobile();
 
 // --- Lógica para el cambio de personaje ---
 const characterSelector = document.getElementById('characterSelector');
 const playerSprite = document.querySelector('#player img');
-let isMago = true; // El personaje inicial es el Mago
+let isMago = true;
 
 characterSelector.addEventListener('click', () => {
   if (isMago) {
     playerSprite.src = "char_mago_f.svg";
-    characterSelector.innerText = "Cambiar a Mago";
+    characterSelector.innerText = "Change to Mage";
   } else {
     playerSprite.src = "char_mago_m.svg";
-    characterSelector.innerText = "Cambiar a Hechicera";
+    characterSelector.innerText = "Change to Sorceress";
   }
   isMago = !isMago;
 });

@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Juego de Personaje y Enemigos</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="gameContainer">
@@ -12,7 +15,26 @@
       <img src="char_mago_m.svg" alt="Jugador">
     </div>
   </div>
-  <button id="characterSelector">Cambiar a Hechicera</button>
+  
+  <div class="ui-container left-side">
+    <div id="hudLeft" class="hud-box">❤️ 100 / 100</div>
+    <div class="level-group">
+        <button id="playerLevelUp" class="level-button">+</button>
+        <div id="playerLevelDisplay">pLevel: 1</div>
+        <button id="playerLevelDown" class="level-button">-</button>
+    </div>
+    <button id="characterSelector">Change to Sorceress</button>
+  </div>
+
+  <div class="ui-container right-side">
+    <div id="hudRight" class="hud-box">Monsters Slain: 0</div>
+    <div class="level-group">
+        <button id="monsterLevelUp" class="level-button">+</button>
+        <div id="monsterLevelDisplay">mLevel: 1</div>
+        <button id="monsterLevelDown" class="level-button">-</button>
+    </div>
+  </div>
+  
   <script src="game.js"></script>
 </body>
 </html>
