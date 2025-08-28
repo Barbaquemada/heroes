@@ -221,7 +221,7 @@ function getPlayerSettings(level) {
     const baseFireballRange = 500;
     const baseFireRate = 150;
 
-    const speed = baseSpeed + (level - 1) * 0.005;
+    const speed = baseSpeed;
     const maxHp = Math.round(baseHp + (level - 1) * 20);
     const damage = Math.round(baseFireballDamage + (level - 1) * 50);
     const fireballSpeed = baseFireballSpeed + (level - 1) * 0.05;
@@ -553,5 +553,6 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 gameLoop();
+
 
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
