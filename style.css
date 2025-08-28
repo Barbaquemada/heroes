@@ -114,8 +114,8 @@ body, html {
   position: fixed;
   top: 15px;
   display: flex;
-  flex-direction: column; /* Esto es clave para que los elementos dentro se apilen */
-  gap: 10px; /* Espacio entre los bloques */
+  flex-direction: column;
+  gap: 10px;
   z-index: 1000;
 }
 
@@ -135,7 +135,7 @@ body, html {
   border: 2px solid gold;
   border-radius: 10px;
   color: gold;
-  font-size: 16px;
+  font-size: 14px; /* Tamaño de fuente más pequeño */
   font-weight: bold;
   white-space: nowrap;
   min-width: 100px;
@@ -143,28 +143,17 @@ body, html {
   font-family: 'Roboto Mono', monospace;
 }
 
-/* Estilos para los grupos de botones de nivel */
-.level-controls { 
+.level-controls {
   display: flex;
-  flex-wrap: wrap; /* Permite que los botones salten de línea */
-  gap: 10px;
-  align-items: center; /* Centra verticalmente los elementos */
+  align-items: center;
+  gap: 5px; /* Espacio más pequeño para que estén cerca */
 }
 
-/* Asegura que el selector de personaje no se mezcle */
-#characterSelector {
-  padding: 8px 15px;
-  background: rgba(0, 0, 0, 0.7);
-  border: 2px solid gold;
-  border-radius: 10px;
+.level-text {
   color: gold;
-  font-size: 16px;
+  font-size: 10px; /* Tamaño de fuente mucho más pequeño */
   font-weight: bold;
-  cursor: pointer;
-  z-index: 1000;
-  transition: transform 0.2s ease-in-out;
-  font-family: 'Roboto Mono', monospace;
-  white-space: nowrap; /* Evita que el texto del botón se rompa */
+  white-space: nowrap;
 }
 
 .level-button {
@@ -173,7 +162,7 @@ body, html {
   border: 2px solid gold;
   border-radius: 10px;
   color: gold;
-  font-size: 16px;
+  font-size: 12px; /* Fuente más pequeña para los botones +/- */
   font-weight: bold;
   cursor: pointer;
   transition: transform 0.2s ease-in-out;
@@ -184,15 +173,16 @@ body, html {
   transform: scale(1.05);
 }
 
-#monsterLevelDisplay, #playerLevelDisplay {
-  padding: 8px 10px;
+#characterSelector {
+  padding: 8px 15px;
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid gold;
   border-radius: 10px;
   color: gold;
-  font-size: 16px;
+  font-size: 12px; /* Fuente más pequeña */
   font-weight: bold;
-  text-align: center;
-  min-width: 90px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: transform 0.2s ease-in-out;
   font-family: 'Roboto Mono', monospace;
 }

@@ -536,10 +536,10 @@ let isMago = true;
 characterSelector.addEventListener('click', () => {
   if (isMago) {
     playerSprite.src = "char_mago_f.svg";
-    characterSelector.innerText = "Change to Mage";
+    characterSelector.innerText = "Sorceress";
   } else {
     playerSprite.src = "char_mago_m.svg";
-    characterSelector.innerText = "Change to Sorceress";
+    characterSelector.innerText = "Mage";
   }
   isMago = !isMago;
 });
