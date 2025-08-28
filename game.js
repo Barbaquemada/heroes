@@ -57,7 +57,7 @@ window.addEventListener("keydown", (e) => {
 updateHUD();
 
 // Posición inicial
-let playerPosition = { x: 200, y: 200 };
+let playerPosition = { x: 1250, y: 1250 };
 player.style.left = `${playerPosition.x}px`;
 player.style.top = `${playerPosition.y}px`;
 
@@ -556,3 +556,4 @@ gameLoop();
 
 
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
+
