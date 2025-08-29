@@ -53,8 +53,7 @@ updateHUD();
 
 // Posición inicial
 let playerPosition = { x: 1250, y: 1250 };
-player.style.left = `${playerPosition.x}px`;
-player.style.top = `${playerPosition.y}px`;
+// No se cambia el estilo inicial, el transform lo manejará en el bucle principal
 
 let keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
@@ -73,20 +72,18 @@ gameContainer.style.position = "relative";
 gameContainer.style.backgroundColor = "#222";
 gameContainer.style.overflow = "hidden";
 
-// --- Movimiento del jugador limitado al tablero ---
+// --- Movimiento del jugador, cámara y flip (SOLUCIÓN MEJORADA) ---
 let isFlipped = false;
 let followMouseMode = false;
 let mousePosition = { x: 0, y: 0 };
-
-// ✅ Guardamos SIEMPRE la posición del ratón en pantalla
 let lastMouseClientX = window.innerWidth / 2;
 let lastMouseClientY = window.innerHeight / 2;
+
 window.addEventListener('mousemove', (e) => {
     lastMouseClientX = e.clientX;
     lastMouseClientY = e.clientY;
 });
 
-// Click para activar/desactivar el modo de seguimiento del ratón
 gameContainer.addEventListener('click', (e) => {
     if ('ontouchstart' in window) return; // ignorar en móvil
     if (paused) return;
@@ -94,33 +91,37 @@ gameContainer.addEventListener('click', (e) => {
     followMouseMode = !followMouseMode;
 });
 
-// ✅ Recalcular la posición del ratón en el MUNDO en cada frame (depende de cámara+zoom)
 function updateMouseWorldPosition() {
     const rect = gameContainer.getBoundingClientRect();
     mousePosition.x = (lastMouseClientX - rect.left) / zoomLevel;
     mousePosition.y = (lastMouseClientY - rect.top) / zoomLevel;
 }
 
+// --- Joystick ---
+let joystickVector = { x: 0, y: 0 };
+
 function movePlayer() {
     if (paused) return;
 
     let dx = 0, dy = 0;
-    const playerSpeed = getPlayerSettings(currentPlayerLevel).speed;
+    const settings = getPlayerSettings(currentPlayerLevel);
+    const playerSpeed = settings.speed;
+    const playerWidth = player.offsetWidth;
+    const playerHeight = player.offsetHeight;
+    const playerCenterX = playerPosition.x + playerWidth / 2;
+    const playerCenterY = playerPosition.y + playerHeight / 2;
 
-    // --- 1️⃣ Movimiento por teclado (prioridad por defecto) ---
+    // Teclado
     if (keys['ArrowUp'] || keys['w']) dy -= playerSpeed;
     if (keys['ArrowDown'] || keys['s']) dy += playerSpeed;
     if (keys['ArrowLeft'] || keys['a']) dx -= playerSpeed;
     if (keys['ArrowRight'] || keys['d']) dx += playerSpeed;
 
-    // --- 2️⃣ Movimiento por mouse si followMouseMode está activo ---
+    // Mouse
     if (followMouseMode) {
-        const playerCenterX = playerPosition.x + 25;
-        const playerCenterY = playerPosition.y + 25;
         const deltaX = mousePosition.x - playerCenterX;
         const deltaY = mousePosition.y - playerCenterY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
         if (distance > playerSpeed) {
             dx = (deltaX / distance) * playerSpeed;
             dy = (deltaY / distance) * playerSpeed;
@@ -129,33 +130,47 @@ function movePlayer() {
             dy = deltaY;
         }
     }
-    // --- 3️⃣ Movimiento por joystick (solo si no hay teclado ni mouse) ---
+    // Joystick
     else if (joystickVector.x !== 0 || joystickVector.y !== 0) {
         dx = joystickVector.x * playerSpeed;
         dy = joystickVector.y * playerSpeed;
     }
 
-    // --- Limitar al tablero ---
-    playerPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, playerPosition.x + dx));
-    playerPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, playerPosition.y + dy));
+    // Limitar al tablero
+    playerPosition.x = Math.max(0, Math.min(BOARD_WIDTH - playerWidth, playerPosition.x + dx));
+    playerPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - playerHeight, playerPosition.y + dy));
 
-    player.style.left = `${playerPosition.x}px`;
-    player.style.top = `${playerPosition.y}px`;
-
-    // --- Voltear sprite con umbral mínimo ---
-    const threshold = 0.5;
-    if (dx < -threshold && !isFlipped) {
-        player.classList.add('flip');
-        isFlipped = true;
-    } else if (dx > threshold && isFlipped) {
-        player.classList.remove('flip');
-        isFlipped = false;
+    // Determinar flip
+    if (followMouseMode) isFlipped = mousePosition.x < playerCenterX;
+    else {
+        const threshold = 0.5;
+        if (dx < -threshold) isFlipped = true;
+        else if (dx > threshold) isFlipped = false;
     }
 
-    spawnEnemy();
-    moveEnemies();
+    // ⭐ APLICA TRANSFORMACIONES POR SEPARADO
+    // El movimiento es INSTANTÁNEO en el contenedor del jugador
+    player.style.transform = `translate(${playerPosition.x}px, ${playerPosition.y}px)`;
+    // El volteo es SUAVE en la imagen del jugador
+    playerSprite.style.transform = `scaleX(${isFlipped ? -1 : 1})`;
 }
 
+// --- Cámara centrada ---
+let cameraX = 0, cameraY = 0;
+function updateCamera() {
+    cameraX = -playerPosition.x * zoomLevel + window.innerWidth / 2 - (player.offsetWidth / 2) * zoomLevel;
+    cameraY = -playerPosition.y * zoomLevel + window.innerHeight / 2 - (player.offsetHeight / 2) * zoomLevel;
+    gameContainer.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${zoomLevel})`;
+}
+
+// --- Zoom ---
+gameContainer.addEventListener('wheel', (e) => {
+    if (paused) return;
+    e.preventDefault();
+    zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
+    zoomLevel = Math.max(0.5, Math.min(zoomLevel, 10));
+    updateCamera();
+});
 
 // --- Enemigos (Lógica de escalado infinito) ---
 let currentMonsterLevel = 1;
@@ -213,8 +228,10 @@ function spawnEnemy() {
         enemy.classList.add('enemy');
         enemy.style.backgroundImage = 'url("monstruo.svg")';
         enemy.style.backgroundSize = 'cover';
-        enemy.style.left = ex + "px";
-        enemy.style.top = ey + "px";
+        enemy.style.position = 'absolute';
+
+        // ⭐ CORRECCIÓN: Inicializar la posición con transform para que sea consistente
+        enemy.style.transform = `translate(${ex}px, ${ey}px)`; 
         gameContainer.appendChild(enemy);
 
         enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: settings.hp });
@@ -243,8 +260,8 @@ function moveEnemies() {
             enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
             enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
 
-            enemy.element.style.left = `${enemyPosition.x}px`;
-            enemy.element.style.top = `${enemyPosition.y}px`;
+            // ⭐ USO DE TRANSFORM PARA EL MOVIMIENTO DEL ENEMIGO
+            enemy.element.style.transform = `translate(${enemyPosition.x}px, ${enemyPosition.y}px)`;
 
             if (distance < 40) takeDamage(5);
         }
@@ -338,16 +355,17 @@ function fireBall(event) {
 
     const fireBall = document.createElement('div');
     fireBall.classList.add('fireball');
-    fireBall.style.left = `${playerPosition.x + 15}px`;
-    fireBall.style.top = `${playerPosition.y + 15}px`;
+    //⭐ Se crea la bola de fuego en la posición del jugador, pero ya no se mueve con CSS left/top
+    fireBall.style.left = `${playerPosition.x + player.offsetWidth / 2 - 10}px`;
+    fireBall.style.top = `${playerPosition.y + player.offsetHeight / 2 - 10}px`;
     gameContainer.appendChild(fireBall);
 
     const rect = gameContainer.getBoundingClientRect();
     const mouseX_world = (event.clientX - rect.left) / zoomLevel;
     const mouseY_world = (event.clientY - rect.top) / zoomLevel;
 
-    const dx = mouseX_world - (playerPosition.x + 25);
-    const dy = mouseY_world - (playerPosition.y + 25);
+    const dx = mouseX_world - (playerPosition.x + player.offsetWidth / 2);
+    const dy = mouseY_world - (playerPosition.y + player.offsetHeight / 2);
     const angle = Math.atan2(dy, dx);
 
     const speed = settings.fireballSpeed;
@@ -358,6 +376,8 @@ function fireBall(event) {
     const fireInterval = setInterval(() => {
         if (paused) return;
 
+        // Se mueve la bola de fuego con left/top, no afecta al rendimiento
+        // porque las bolas de fuego son elementos efímeros y no muchos
         const x = parseInt(fireBall.style.left) + Math.cos(angle) * speed;
         const y = parseInt(fireBall.style.top) + Math.sin(angle) * speed;
         fireBall.style.left = `${x}px`;
@@ -413,8 +433,8 @@ function showDamage(enemy, amount) {
     dmg.innerText = `-${amount}`;
     gameContainer.appendChild(dmg);
 
-    dmg.style.left = `${enemy.position.x + 10}px`;
-    dmg.style.top = `${enemy.position.y - 10}px`;
+    // ⭐ USO DE TRANSFORM PARA LOS NÚMEROS DE DAÑO
+    dmg.style.transform = `translate(${enemy.position.x + 10}px, ${enemy.position.y - 10}px)`;
 
     setTimeout(() => dmg.remove(), 800);
 }
@@ -440,28 +460,6 @@ function updateHUD() {
     hudLeft.innerText = `❤️ ${playerHP} / ${maxPlayerHP}`;
     hudRight.innerText = `Monsters Slain: ${killCount}`;
 }
-
-// --- Cámara centrada ---
-let cameraX = 0;
-let cameraY = 0;
-
-function updateCamera() {
-    cameraX = -playerPosition.x * zoomLevel + window.innerWidth / 2 - 25 * zoomLevel;
-    cameraY = -playerPosition.y * zoomLevel + window.innerHeight / 2 - 25 * zoomLevel;
-
-    gameContainer.style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${zoomLevel})`;
-}
-
-// --- Zoom ---
-gameContainer.addEventListener('wheel', (e) => {
-    if (paused) return;
-    e.preventDefault();
-
-    zoomLevel += (e.deltaY > 0 ? -0.1 : 0.1);
-    zoomLevel = Math.max(0.5, Math.min(zoomLevel, 10));
-
-    updateCamera();
-});
 
 // --- Joystick móvil dinámico ---
 let joystickContainer = document.createElement("div");
@@ -494,7 +492,6 @@ joystick.style.top = "50%";
 joystick.style.transform = "translate(-50%, -50%)";
 joystick.style.touchAction = "none";
 
-let joystickVector = { x: 0, y: 0 };
 let touchId = null;
 
 // Aparece joystick donde toques
@@ -597,12 +594,15 @@ characterSelector.addEventListener('click', () => {
 // --- Bucle principal ---
 function gameLoop() {
     if (!paused && !gameOver) {
-        updateMouseWorldPosition(); // ✅ clave: el ratón manda siempre, aunque esté quieto
+        updateMouseWorldPosition();
         movePlayer();
+        spawnEnemy();
+        moveEnemies();
         updateCamera();
     }
     requestAnimationFrame(gameLoop);
 }
+
 gameLoop();
 
 autoFire();

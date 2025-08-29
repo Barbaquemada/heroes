@@ -23,7 +23,9 @@ body, html {
   width: 50px;
   height: 50px;
   overflow: visible;
-  transition: transform 0.1s ease-out;
+  /* YA NO NECESITAS ESTA TRANSICIÓN AQUÍ */
+  /* transition: transform 0.1s ease-out; */
+  transform-origin: center center;
 }
 
 #player img {
@@ -31,18 +33,23 @@ body, html {
   height: 100%;
   object-fit: contain;
   display: block;
+  /* ⭐ AÑADE LA TRANSICIÓN SOLO PARA LA IMAGEN */
+  transition: transform 0.1s ease-out;
+  transform-origin: center center;
 }
 
-.flip {
+/* La clase .flip ya no es necesaria, el movimiento y giro se manejan con transform en el JS */
+/* .flip {
   transform: scaleX(-1);
-}
+} */
 
 .enemy {
   position: absolute;
   width: 50px;
   height: 50px;
   background-size: cover;
-  transition: left 0.1s, top 0.1s;
+  /* Ahora el enemigo también se mueve con transform */
+  transition: transform 0.1s ease-out;
 }
 
 .fireball {
@@ -60,11 +67,13 @@ body, html {
   background: radial-gradient(circle, yellow, red, transparent);
   border-radius: 50%;
   animation: boom 0.5s ease-out forwards;
+  /* Para centrar la explosión */
+  transform: translate(-50%, -50%);
 }
 
 @keyframes boom {
-  from { transform: scale(0.2); opacity: 1; }
-  to { transform: scale(1.5); opacity: 0; }
+  from { transform: scale(0.2) translate(-50%, -50%); opacity: 1; }
+  to { transform: scale(1.5) translate(-50%, -50%); opacity: 0; }
 }
 
 .damage-text {
@@ -135,7 +144,7 @@ body, html {
   border: 2px solid gold;
   border-radius: 10px;
   color: gold;
-  font-size: 14px; /* Tamaño de fuente más pequeño */
+  font-size: 14px;
   font-weight: bold;
   white-space: nowrap;
   min-width: 100px;
@@ -146,12 +155,12 @@ body, html {
 .level-controls {
   display: flex;
   align-items: center;
-  gap: 5px; /* Espacio más pequeño para que estén cerca */
+  gap: 5px;
 }
 
 .level-text {
   color: gold;
-  font-size: 10px; /* Tamaño de fuente mucho más pequeño */
+  font-size: 10px;
   font-weight: bold;
   white-space: nowrap;
 }
@@ -162,7 +171,7 @@ body, html {
   border: 2px solid gold;
   border-radius: 10px;
   color: gold;
-  font-size: 12px; /* Fuente más pequeña para los botones +/- */
+  font-size: 12px;
   font-weight: bold;
   cursor: pointer;
   transition: transform 0.2s ease-in-out;
@@ -179,7 +188,7 @@ body, html {
   border: 2px solid gold;
   border-radius: 10px;
   color: gold;
-  font-size: 12px; /* Fuente más pequeña */
+  font-size: 12px;
   font-weight: bold;
   cursor: pointer;
   z-index: 1000;
