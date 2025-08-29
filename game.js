@@ -88,9 +88,9 @@ window.addEventListener('mousemove', (e) => {
 
 // Click para activar/desactivar el modo de seguimiento del ratón
 gameContainer.addEventListener('click', (e) => {
-    // Detectar si es touch (móvil)
-    if ('ontouchstart' in window) return; // ignorar clicks en móviles
+    if ('ontouchstart' in window) return; // ignorar en móvil
     if (paused) return;
+    if (e.target.tagName === 'BUTTON') return; // ignorar clicks en botones
     followMouseMode = !followMouseMode;
 });
 
@@ -575,4 +575,5 @@ gameLoop();
 autoFire();
 
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
+
 
