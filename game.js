@@ -545,6 +545,39 @@ function updateJoystickVector(touch) {
     joystick.style.transform = "translate(-50%, -50%)";
 }
 
+// --- Pinch-to-zoom móvil ---
+let lastTouchDistance = null;
+
+gameContainer.addEventListener('touchmove', (e) => {
+    if (paused) return;
+
+    if (e.touches.length === 2) {
+        e.preventDefault(); // evita que la página haga zoom
+
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+
+        const dx = touch2.clientX - touch1.clientX;
+        const dy = touch2.clientY - touch1.clientY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (lastTouchDistance !== null) {
+            const delta = distance - lastTouchDistance;
+            zoomLevel += delta * 0.005; // sensibilidad del zoom
+            zoomLevel = Math.max(0.5, Math.min(zoomLevel, 10));
+            updateCamera();
+        }
+
+        lastTouchDistance = distance;
+    }
+});
+
+gameContainer.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+        lastTouchDistance = null;
+    }
+});
+
 // --- Lógica para el cambio de personaje ---
 const characterSelector = document.getElementById('characterSelector');
 const playerSprite = document.querySelector('#player img');
@@ -575,5 +608,3 @@ gameLoop();
 autoFire();
 
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
-
-
