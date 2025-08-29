@@ -23,8 +23,6 @@ body, html {
   width: 50px;
   height: 50px;
   overflow: visible;
-  /* YA NO NECESITAS ESTA TRANSICIÓN AQUÍ */
-  /* transition: transform 0.1s ease-out; */
   transform-origin: center center;
 }
 
@@ -33,24 +31,51 @@ body, html {
   height: 100%;
   object-fit: contain;
   display: block;
-  /* ⭐ AÑADE LA TRANSICIÓN SOLO PARA LA IMAGEN */
   transition: transform 0.1s ease-out;
   transform-origin: center center;
+  transform: translateZ(0); /* Forzar aceleración por hardware */
 }
-
-/* La clase .flip ya no es necesaria, el movimiento y giro se manejan con transform en el JS */
-/* .flip {
-  transform: scaleX(-1);
-} */
 
 .enemy {
   position: absolute;
   width: 50px;
   height: 50px;
   background-size: cover;
-  /* Ahora el enemigo también se mueve con transform */
-  transition: transform 0.1s ease-out;
+  position: relative; /* Indispensable para posicionar el pseudo-elemento */
+  /* Eliminamos la transición de filter de aquí */
 }
+
+/* ⭐ Estilo del círculo envolvente de congelación */
+.enemy.frozen::before {
+  content: '';
+  position: absolute;
+  top: -5px; /* Ajusta la posición para centrar el círculo alrededor del sprite */
+  left: -5px; /* Ajusta la posición para centrar el círculo alrededor del sprite */
+  width: 60px; /* Tamaño del círculo (sprite 50px + 2*5px de desplazamiento) */
+  height: 60px; /* Tamaño del círculo */
+  border-radius: 50%; /* Para que sea un círculo */
+  
+  /* Gradiente radial para el relleno azul intenso */
+  background: radial-gradient(circle, rgba(30, 144, 255, 0.6) 0%, rgba(70, 130, 180, 0.6) 70%); /* Azul fuerte a más suave con opacidad */
+  
+  /* Borde azul claro con box-shadow */
+  box-shadow: 0 0 10px 3px rgba(173, 216, 230, 0.8), /* Borde exterior azul claro */
+              inset 0 0 5px rgba(173, 216, 230, 0.5); /* Borde interior suave */
+  
+  z-index: -1; /* Para que quede detrás del sprite del enemigo */
+  
+  /* Transición para la aparición y desaparición suave */
+  opacity: 0;
+  transform: scale(0.2); /* Empieza pequeño */
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* ⭐ Cuando el enemigo está congelado, el círculo se hace visible */
+.enemy.frozen::before {
+  opacity: 1;
+  transform: scale(1); /* Crece a su tamaño normal */
+}
+
 
 .fireball {
   position: absolute;
@@ -60,16 +85,30 @@ body, html {
   border-radius: 50%;
 }
 
+/* ⭐ Nuevo estilo para el Frostball */
+.frostball {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #87CEFA 60%, #1E90FF); /* Azul claro a oscuro */
+  border-radius: 50%;
+}
+
 .explosion {
   position: absolute;
   width: 60px;
   height: 60px;
-  background: radial-gradient(circle, yellow, red, transparent);
+  background: radial-gradient(circle, yellow, red, transparent); /* Explosión de Fireball por defecto */
   border-radius: 50%;
   animation: boom 0.5s ease-out forwards;
-  /* Para centrar la explosión */
   transform: translate(-50%, -50%);
 }
+
+/* ⭐ Nueva clase para la explosión de Frostball */
+.explosion.frost {
+  background: radial-gradient(circle, #ADD8E6, #1E90FF, transparent); /* Azul claro a oscuro */
+}
+
 
 @keyframes boom {
   from { transform: scale(0.2) translate(-50%, -50%); opacity: 1; }
@@ -81,10 +120,8 @@ body, html {
   color: red;
   font-weight: bold;
   font-size: 18px;
-  /* ⭐ AHORA LA ANIMACIÓN SOLO MANEJA EL MOVIMIENTO Y LA OPACIDAD */
-  animation: floatUp 2.4s ease-out forwards;
+  animation: floatUp 0.8s ease-out forwards;
   pointer-events: none;
-  /* Para que la animación flote desde el centro del elemento */
   left: 50%;
   top: 50%;
 }
@@ -169,7 +206,8 @@ body, html {
   white-space: nowrap;
 }
 
-.level-button {
+/* ⭐ Aplicar el mismo estilo a los botones de nivel y al selector de hechizo */
+.level-button, #spellSelector { /* Añadido #spellSelector aquí */
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid gold;
@@ -182,7 +220,7 @@ body, html {
   font-family: 'Roboto Mono', monospace;
 }
 
-.level-button:hover, #characterSelector:hover {
+.level-button:hover, #characterSelector:hover, #spellSelector:hover { /* Añadido #spellSelector aquí */
   transform: scale(1.05);
 }
 

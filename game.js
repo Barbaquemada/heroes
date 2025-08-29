@@ -16,6 +16,14 @@ let hudRight = document.getElementById('hudRight');
 // Variables para los temporizadores de disparo
 let autoFireTimer;
 
+// ⭐ Nuevas variables para el sistema de hechizos
+let currentSpell = 'fireball';
+const spellSelector = document.getElementById('spellSelector');
+
+// ⭐ Variables para el personaje y el flip
+const playerSprite = document.querySelector('#player img');
+let isMago = true;
+
 // --- Overlay de PAUSA ---
 let pauseOverlay = document.createElement("div");
 pauseOverlay.innerText = "⏸ PAUSE";
@@ -53,8 +61,6 @@ updateHUD();
 
 // Posición inicial
 let playerPosition = { x: 1250, y: 1250 };
-// No se cambia el estilo inicial, el transform lo manejará en el bucle principal
-
 let keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
@@ -72,7 +78,7 @@ gameContainer.style.position = "relative";
 gameContainer.style.backgroundColor = "#222";
 gameContainer.style.overflow = "hidden";
 
-// --- Movimiento del jugador, cámara y flip (SOLUCIÓN MEJORADA) ---
+// --- Movimiento del jugador, cámara y flip ---
 let isFlipped = false;
 let followMouseMode = false;
 let mousePosition = { x: 0, y: 0 };
@@ -88,6 +94,17 @@ gameContainer.addEventListener('click', (e) => {
     if ('ontouchstart' in window) return; // ignorar en móvil
     if (paused) return;
     if (e.target.tagName === 'BUTTON') return; // ignorar clicks en botones
+    
+    // ⭐ Lanza el hechizo si el modo de seguir el ratón está desactivado
+    if (!followMouseMode) {
+        castSpell({
+            clientX: e.clientX,
+            clientY: e.clientY,
+            spellType: currentSpell
+        });
+    }
+
+    // ⭐ Alterna el modo de seguir al ratón
     followMouseMode = !followMouseMode;
 });
 
@@ -148,10 +165,8 @@ function movePlayer() {
         else if (dx > threshold) isFlipped = false;
     }
 
-    // ⭐ APLICA TRANSFORMACIONES POR SEPARADO
-    // El movimiento es INSTANTÁNEO en el contenedor del jugador
+    // Aplica transformaciones por separado para evitar el "desfase"
     player.style.transform = `translate(${playerPosition.x}px, ${playerPosition.y}px)`;
-    // El volteo es SUAVE en la imagen del jugador
     playerSprite.style.transform = `scaleX(${isFlipped ? -1 : 1})`;
 }
 
@@ -230,20 +245,20 @@ function spawnEnemy() {
         enemy.style.backgroundSize = 'cover';
         enemy.style.position = 'absolute';
 
-        // ⭐ CORRECCIÓN: Inicializar la posición con transform para que sea consistente
         enemy.style.transform = `translate(${ex}px, ${ey}px)`; 
         gameContainer.appendChild(enemy);
 
-        enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: settings.hp });
+        // ⭐ Añade la propiedad isFrozen al enemigo
+        enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: settings.hp, isFrozen: false });
     }
 }
 
 function moveEnemies() {
     if (paused) return;
-
     const settings = getMonsterSettings(currentMonsterLevel);
-
     enemies.forEach(enemy => {
+        if (enemy.isFrozen) return; // Si está congelado, no se mueve
+
         let enemyPosition = enemy.position;
         let deltaX = playerPosition.x - enemyPosition.x;
         let deltaY = playerPosition.y - enemyPosition.y;
@@ -256,13 +271,9 @@ function moveEnemies() {
             let angle = Math.atan2(deltaY, deltaX);
             enemyPosition.x += Math.cos(angle) * settings.speed;
             enemyPosition.y += Math.sin(angle) * settings.speed;
-
             enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
             enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
-
-            // ⭐ USO DE TRANSFORM PARA EL MOVIMIENTO DEL ENEMIGO
             enemy.element.style.transform = `translate(${enemyPosition.x}px, ${enemyPosition.y}px)`;
-
             if (distance < 40) takeDamage(5);
         }
     });
@@ -282,14 +293,26 @@ function getPlayerSettings(level) {
     const baseFireballRange = 500;
     const baseFireRate = 150;
 
+    const baseFrostballDamage = 20; 
+    const baseFrostballSpeed = 8; 
+    const baseFrostballRange = 600; 
+    const baseFreezeDuration = 3000; // ⭐ Duración base
+
     const speed = baseSpeed;
     const maxHp = Math.round(baseHp + (level - 1) * 20);
-    const damage = Math.round(baseFireballDamage + (level - 1) * 50);
+    const fireballDamage = Math.round(baseFireballDamage + (level - 1) * 50);
     const fireballSpeed = baseFireballSpeed + (level - 1) * 0.05;
     const fireballRange = baseFireballRange + (level - 1) * 50;
     const fireRate = Math.max(50, baseFireRate - (level - 1) * 0.5);
 
-    return { speed, maxHp, damage, fireballSpeed, fireballRange, fireRate };
+    const frostballDamage = Math.round(baseFrostballDamage + (level - 1) * 25);
+    const frostballSpeed = baseFrostballSpeed + (level - 1) * 0.03;
+    const frostballRange = baseFrostballRange + (level - 1) * 30;
+    
+    // ⭐ Cálculo para que la duración aumente con el nivel
+    const freezeDuration = baseFreezeDuration + (level - 1) * 500; // +0.5 segundos por nivel
+
+    return { speed, maxHp, fireballDamage, fireballSpeed, fireballRange, fireRate, frostballDamage, frostballSpeed, frostballRange, freezeDuration };
 }
 
 function updatePlayerLevelDisplay() {
@@ -319,46 +342,79 @@ playerLevelDownButton.addEventListener('click', () => {
 
 updatePlayerLevelDisplay();
 
+// ⭐ Lógica para cambiar de hechizo
+spellSelector.addEventListener('click', () => {
+    if (currentSpell === 'fireball') {
+        currentSpell = 'frostball';
+        spellSelector.innerText = "Spell: ❄️";
+    } else {
+        currentSpell = 'fireball';
+        spellSelector.innerText = "Spell: 🔥";
+    }
+});
+
 // --- Disparo automático para PC y móvil ---
 function autoFire() {
     if (paused || gameOver) return;
     const settings = getPlayerSettings(currentPlayerLevel);
+    let fireRate = settings.fireRate;
+    let targetEnemy = null;
+    let minDist = Infinity;
+
     if (enemies.length > 0) {
-        let nearest = null;
-        let minDist = Infinity;
-        for (let enemy of enemies) {
-            let dx = enemy.position.x - playerPosition.x;
-            let dy = enemy.position.y - playerPosition.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDist) {
-                minDist = dist;
-                nearest = enemy;
+        if (currentSpell === 'fireball') {
+            // Busca el enemigo más cercano
+            for (let enemy of enemies) {
+                let dx = enemy.position.x - playerPosition.x;
+                let dy = enemy.position.y - playerPosition.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < minDist) {
+                    minDist = dist;
+                    targetEnemy = enemy;
+                }
+            }
+        } else { // 'frostball'
+            // Busca el enemigo no congelado más cercano
+            for (let enemy of enemies) {
+                if (!enemy.isFrozen) {
+                    let dx = enemy.position.x - playerPosition.x;
+                    let dy = enemy.position.y - playerPosition.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        targetEnemy = enemy;
+                    }
+                }
             }
         }
-        if (nearest && minDist < 400) {
-            const enemyX_screen = (nearest.position.x * zoomLevel) + cameraX;
-            const enemyY_screen = (nearest.position.y * zoomLevel) + cameraY;
 
-            fireBall({
+        const spellRange = currentSpell === 'fireball' ? settings.fireballRange : settings.frostballRange;
+
+        if (targetEnemy && minDist < spellRange) {
+            const enemyX_screen = (targetEnemy.position.x * zoomLevel) + cameraX;
+            const enemyY_screen = (targetEnemy.position.y * zoomLevel) + cameraY;
+            castSpell({
                 clientX: enemyX_screen,
-                clientY: enemyY_screen
+                clientY: enemyY_screen,
+                spellType: currentSpell
             });
         }
     }
-    autoFireTimer = setTimeout(autoFire, settings.fireRate);
+    autoFireTimer = setTimeout(autoFire, fireRate);
 }
 
-function fireBall(event) {
+// ⭐ CREACIÓN de una función `castSpell` genérica que gestiona ambos hechizos
+function castSpell(event) {
     if (paused) return;
 
     const settings = getPlayerSettings(currentPlayerLevel);
-
-    const fireBall = document.createElement('div');
-    fireBall.classList.add('fireball');
-    //⭐ Se crea la bola de fuego en la posición del jugador, pero ya no se mueve con CSS left/top
-    fireBall.style.left = `${playerPosition.x + player.offsetWidth / 2 - 10}px`;
-    fireBall.style.top = `${playerPosition.y + player.offsetHeight / 2 - 10}px`;
-    gameContainer.appendChild(fireBall);
+    const isFireball = event.spellType === 'fireball';
+    const spellDiv = document.createElement('div');
+    spellDiv.classList.add(isFireball ? 'fireball' : 'frostball');
+    
+    spellDiv.style.left = `${playerPosition.x + player.offsetWidth / 2 - 10}px`;
+    spellDiv.style.top = `${playerPosition.y + player.offsetHeight / 2 - 10}px`;
+    gameContainer.appendChild(spellDiv);
 
     const rect = gameContainer.getBoundingClientRect();
     const mouseX_world = (event.clientX - rect.left) / zoomLevel;
@@ -368,20 +424,18 @@ function fireBall(event) {
     const dy = mouseY_world - (playerPosition.y + player.offsetHeight / 2);
     const angle = Math.atan2(dy, dx);
 
-    const speed = settings.fireballSpeed;
-    const damage = settings.damage;
-    const range = settings.fireballRange;
+    const speed = isFireball ? settings.fireballSpeed : settings.frostballSpeed;
+    const damage = isFireball ? settings.fireballDamage : settings.frostballDamage;
+    const range = isFireball ? settings.fireballRange : settings.frostballRange;
     let traveled = 0;
 
-    const fireInterval = setInterval(() => {
+    const spellInterval = setInterval(() => {
         if (paused) return;
 
-        // Se mueve la bola de fuego con left/top, no afecta al rendimiento
-        // porque las bolas de fuego son elementos efímeros y no muchos
-        const x = parseInt(fireBall.style.left) + Math.cos(angle) * speed;
-        const y = parseInt(fireBall.style.top) + Math.sin(angle) * speed;
-        fireBall.style.left = `${x}px`;
-        fireBall.style.top = `${y}px`;
+        const x = parseInt(spellDiv.style.left) + Math.cos(angle) * speed;
+        const y = parseInt(spellDiv.style.top) + Math.sin(angle) * speed;
+        spellDiv.style.left = `${x}px`;
+        spellDiv.style.top = `${y}px`;
         traveled += speed;
 
         for (let enemy of enemies) {
@@ -389,39 +443,62 @@ function fireBall(event) {
             const dy = y - enemy.position.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 40) {
-                explode(fireBall, enemy, damage);
-                clearInterval(fireInterval);
+                explode(spellDiv, enemy, damage, isFireball);
+                clearInterval(spellInterval);
                 return;
             }
         }
 
         if (traveled > range) {
-            fireBall.remove();
-            clearInterval(fireInterval);
+            spellDiv.remove();
+            clearInterval(spellInterval);
         }
     }, 30);
 }
 
-function explode(fireBall, enemy, damage) {
+// ⭐ MODIFICACIONES en la función `explode` para manejar el nuevo efecto
+function explode(spellDiv, enemy, damage, isFireball) {
     if (paused) return;
 
     const explosion = document.createElement("div");
     explosion.classList.add("explosion");
-    explosion.style.left = fireBall.style.left;
-    explosion.style.top = fireBall.style.top;
+    
+    // ⭐ Añade la clase 'frost' si es un Frostball
+    if (!isFireball) {
+        explosion.classList.add('frost');
+    }
+
+    explosion.style.left = spellDiv.style.left;
+    explosion.style.top = spellDiv.style.top;
     gameContainer.appendChild(explosion);
     setTimeout(() => explosion.remove(), 500);
 
     enemy.hp -= damage;
     showDamage(enemy, damage);
+
+    // ⭐ Aplica el efecto de congelación si es un Frostball
+    if (!isFireball && !enemy.isFrozen) {
+        const settings = getPlayerSettings(currentPlayerLevel);
+        freezeEnemy(enemy, settings.freezeDuration);
+    }
+
     if (enemy.hp <= 0) {
         enemy.element.remove();
         enemies = enemies.filter(e => e !== enemy);
         killCount++;
         updateHUD();
     }
+    spellDiv.remove();
+}
 
-    fireBall.remove();
+// ⭐ NUEVA FUNCIÓN: Congela al enemigo por un tiempo
+function freezeEnemy(enemy, duration) {
+    enemy.isFrozen = true;
+    enemy.element.classList.add('frozen');
+    setTimeout(() => {
+        enemy.isFrozen = false;
+        enemy.element.classList.remove('frozen');
+    }, duration);
 }
 
 // --- Numeritos flotantes ---
@@ -578,9 +655,6 @@ gameContainer.addEventListener('touchend', (e) => {
 
 // --- Lógica para el cambio de personaje ---
 const characterSelector = document.getElementById('characterSelector');
-const playerSprite = document.querySelector('#player img');
-let isMago = true;
-
 characterSelector.addEventListener('click', () => {
     if (isMago) {
         playerSprite.src = "char_mago_f.svg";
@@ -605,7 +679,5 @@ function gameLoop() {
 }
 
 gameLoop();
-
 autoFire();
-
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
