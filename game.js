@@ -15,7 +15,6 @@ let hudRight = document.getElementById('hudRight');
 
 // Variables para los temporizadores de disparo
 let autoFireTimer;
-let fireBallContinuousTimer;
 
 // --- Overlay de PAUSA ---
 let pauseOverlay = document.createElement("div");
@@ -43,12 +42,8 @@ window.addEventListener("keydown", (e) => {
 
         if (paused) {
             clearTimeout(autoFireTimer);
-            clearTimeout(fireBallContinuousTimer);
         } else {
-            autoFireMobile();
-            if (mouseDown) {
-                fireBallContinuous();
-            }
+            autoFire();
         }
     }
 });
@@ -80,6 +75,29 @@ gameContainer.style.overflow = "hidden";
 
 // --- Movimiento del jugador limitado al tablero ---
 let isFlipped = false;
+let followMouseMode = false;
+let mousePosition = { x: 0, y: 0 };
+
+// ✅ Guardamos SIEMPRE la posición del ratón en pantalla
+let lastMouseClientX = window.innerWidth / 2;
+let lastMouseClientY = window.innerHeight / 2;
+window.addEventListener('mousemove', (e) => {
+    lastMouseClientX = e.clientX;
+    lastMouseClientY = e.clientY;
+});
+
+// Click para activar/desactivar el modo de seguimiento del ratón
+gameContainer.addEventListener('click', (e) => {
+    if (paused) return;
+    followMouseMode = !followMouseMode;
+});
+
+// ✅ Recalcular la posición del ratón en el MUNDO en cada frame (depende de cámara+zoom)
+function updateMouseWorldPosition() {
+    const rect = gameContainer.getBoundingClientRect();
+    mousePosition.x = (lastMouseClientX - rect.left) / zoomLevel;
+    mousePosition.y = (lastMouseClientY - rect.top) / zoomLevel;
+}
 
 function movePlayer() {
     if (paused) return;
@@ -87,24 +105,47 @@ function movePlayer() {
     let dx = 0, dy = 0;
     const playerSpeed = getPlayerSettings(currentPlayerLevel).speed;
 
+    // --- 1️⃣ Movimiento por teclado (prioridad por defecto) ---
     if (keys['ArrowUp'] || keys['w']) dy -= playerSpeed;
     if (keys['ArrowDown'] || keys['s']) dy += playerSpeed;
     if (keys['ArrowLeft'] || keys['a']) dx -= playerSpeed;
     if (keys['ArrowRight'] || keys['d']) dx += playerSpeed;
 
-    dx += joystickVector.x * playerSpeed;
-    dy += joystickVector.y * playerSpeed;
+    // --- 2️⃣ Movimiento por mouse si followMouseMode está activo ---
+    if (followMouseMode) {
+        const playerCenterX = playerPosition.x + 25;
+        const playerCenterY = playerPosition.y + 25;
+        const deltaX = mousePosition.x - playerCenterX;
+        const deltaY = mousePosition.y - playerCenterY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
+        if (distance > playerSpeed) {
+            dx = (deltaX / distance) * playerSpeed;
+            dy = (deltaY / distance) * playerSpeed;
+        } else {
+            dx = deltaX;
+            dy = deltaY;
+        }
+    }
+    // --- 3️⃣ Movimiento por joystick (solo si no hay teclado ni mouse) ---
+    else if (joystickVector.x !== 0 || joystickVector.y !== 0) {
+        dx = joystickVector.x * playerSpeed;
+        dy = joystickVector.y * playerSpeed;
+    }
+
+    // --- Limitar al tablero ---
     playerPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, playerPosition.x + dx));
     playerPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, playerPosition.y + dy));
 
     player.style.left = `${playerPosition.x}px`;
     player.style.top = `${playerPosition.y}px`;
 
-    if (dx < 0 && !isFlipped) {
+    // --- Voltear sprite con umbral mínimo ---
+    const threshold = 0.5;
+    if (dx < -threshold && !isFlipped) {
         player.classList.add('flip');
         isFlipped = true;
-    } else if (dx > 0 && isFlipped) {
+    } else if (dx > threshold && isFlipped) {
         player.classList.remove('flip');
         isFlipped = false;
     }
@@ -112,6 +153,7 @@ function movePlayer() {
     spawnEnemy();
     moveEnemies();
 }
+
 
 // --- Enemigos (Lógica de escalado infinito) ---
 let currentMonsterLevel = 1;
@@ -157,7 +199,7 @@ function spawnEnemy() {
 
     const settings = getMonsterSettings(currentMonsterLevel);
 
-if (enemies.length < settings.maxEnemies && Math.random() < settings.spawnChance) {
+    if (enemies.length < settings.maxEnemies && Math.random() < settings.spawnChance) {
         const spawnDist = 200;
         let ex, ey;
         do {
@@ -258,35 +300,33 @@ playerLevelDownButton.addEventListener('click', () => {
 
 updatePlayerLevelDisplay();
 
-// --- Disparo hacia el puntero (PC) ---
-let mouseDown = false;
-let lastMouseX = 0, lastMouseY = 0;
-
-window.addEventListener("mousemove", (e) => {
-    lastMouseX = e.clientX;
-    lastMouseY = e.clientY;
-});
-
-window.addEventListener("mousedown", (e) => {
-    if (paused) return;
-    if (e.button === 0 || e.button === 2) {
-        e.preventDefault();
-        mouseDown = true;
-        fireBallContinuous();
-    }
-});
-
-window.addEventListener("mouseup", (e) => {
-    if (e.button === 0 || e.button === 2) {
-        mouseDown = false;
-    }
-});
-
-function fireBallContinuous() {
-    if (paused || gameOver || !mouseDown) return;
-    fireBall({ button: 0, clientX: lastMouseX, clientY: lastMouseY });
+// --- Disparo automático para PC y móvil ---
+function autoFire() {
+    if (paused || gameOver) return;
     const settings = getPlayerSettings(currentPlayerLevel);
-    fireBallContinuousTimer = setTimeout(fireBallContinuous, settings.fireRate);
+    if (enemies.length > 0) {
+        let nearest = null;
+        let minDist = Infinity;
+        for (let enemy of enemies) {
+            let dx = enemy.position.x - playerPosition.x;
+            let dy = enemy.position.y - playerPosition.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = enemy;
+            }
+        }
+        if (nearest && minDist < 400) {
+            const enemyX_screen = (nearest.position.x * zoomLevel) + cameraX;
+            const enemyY_screen = (nearest.position.y * zoomLevel) + cameraY;
+
+            fireBall({
+                clientX: enemyX_screen,
+                clientY: enemyY_screen
+            });
+        }
+    }
+    autoFireTimer = setTimeout(autoFire, settings.fireRate);
 }
 
 function fireBall(event) {
@@ -496,37 +536,12 @@ function updateJoystickVector(touch) {
     let maxDist = rect.width / 2;
     joystickVector.x = Math.max(-1, Math.min(1, dx / maxDist));
     joystickVector.y = Math.max(-1, Math.min(1, dy / maxDist));
-}
 
-// --- Disparo automático en móvil ---
-function autoFireMobile() {
-    if (paused || gameOver) return;
-    const settings = getPlayerSettings(currentPlayerLevel);
-    if (enemies.length > 0 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-        let nearest = null;
-        let minDist = Infinity;
-        for (let enemy of enemies) {
-            let dx = enemy.position.x - playerPosition.x;
-            let dy = enemy.position.y - playerPosition.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < minDist) {
-                minDist = dist;
-                nearest = enemy;
-            }
-        }
-        if (nearest && minDist < 400) {
-            const enemyX_screen = (nearest.position.x * zoomLevel) + cameraX;
-            const enemyY_screen = (nearest.position.y * zoomLevel) + cameraY;
-
-            fireBall({
-                clientX: enemyX_screen,
-                clientY: enemyY_screen
-            });
-        }
-    }
-    autoFireTimer = setTimeout(autoFireMobile, settings.fireRate);
+    // (Opcional) mover el "stick" visual:
+    joystick.style.left = `${50 + joystickVector.x * 40}%`;
+    joystick.style.top = `${50 + joystickVector.y * 40}%`;
+    joystick.style.transform = "translate(-50%, -50%)";
 }
-autoFireMobile();
 
 // --- Lógica para el cambio de personaje ---
 const characterSelector = document.getElementById('characterSelector');
@@ -534,19 +549,20 @@ const playerSprite = document.querySelector('#player img');
 let isMago = true;
 
 characterSelector.addEventListener('click', () => {
-  if (isMago) {
-    playerSprite.src = "char_mago_f.svg";
-    characterSelector.innerText = "Sorceress";
-  } else {
-    playerSprite.src = "char_mago_m.svg";
-    characterSelector.innerText = "Mage";
-  }
-  isMago = !isMago;
+    if (isMago) {
+        playerSprite.src = "char_mago_f.svg";
+        characterSelector.innerText = "Sorceress";
+    } else {
+        playerSprite.src = "char_mago_m.svg";
+        characterSelector.innerText = "Mage";
+    }
+    isMago = !isMago;
 });
 
 // --- Bucle principal ---
 function gameLoop() {
     if (!paused && !gameOver) {
+        updateMouseWorldPosition(); // ✅ clave: el ratón manda siempre, aunque esté quieto
         movePlayer();
         updateCamera();
     }
@@ -554,6 +570,6 @@ function gameLoop() {
 }
 gameLoop();
 
+autoFire();
 
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
-
