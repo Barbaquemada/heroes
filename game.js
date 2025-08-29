@@ -433,8 +433,9 @@ function showDamage(enemy, amount) {
     dmg.innerText = `-${amount}`;
     gameContainer.appendChild(dmg);
 
-    // ⭐ USO DE TRANSFORM PARA LOS NÚMEROS DE DAÑO
-    dmg.style.transform = `translate(${enemy.position.x + 10}px, ${enemy.position.y - 10}px)`;
+    // ⭐ CORRECCIÓN: POSICIONA CON LEFT Y TOP, NO CON TRANSFORM
+    dmg.style.left = `${enemy.position.x + 10}px`;
+    dmg.style.top = `${enemy.position.y - 10}px`;
 
     setTimeout(() => dmg.remove(), 800);
 }

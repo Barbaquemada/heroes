@@ -81,8 +81,12 @@ body, html {
   color: red;
   font-weight: bold;
   font-size: 18px;
-  animation: floatUp 0.8s ease-out forwards;
+  /* ⭐ AHORA LA ANIMACIÓN SOLO MANEJA EL MOVIMIENTO Y LA OPACIDAD */
+  animation: floatUp 2.4s ease-out forwards;
   pointer-events: none;
+  /* Para que la animación flote desde el centro del elemento */
+  left: 50%;
+  top: 50%;
 }
 
 @keyframes floatUp {
