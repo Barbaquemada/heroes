@@ -248,8 +248,8 @@ function spawnEnemy() {
         enemy.style.transform = `translate(${ex}px, ${ey}px)`; 
         gameContainer.appendChild(enemy);
 
-        // ⭐ Añade la propiedad isFrozen al enemigo
-        enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: settings.hp, isFrozen: false });
+        // ⭐ Añade las propiedades isFrozen, isConverted e isAfflicted al enemigo
+        enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: settings.hp, isFrozen: false, isConverted: false, isAfflicted: false });
     }
 }
 
@@ -257,24 +257,90 @@ function moveEnemies() {
     if (paused) return;
     const settings = getMonsterSettings(currentMonsterLevel);
     enemies.forEach(enemy => {
-        if (enemy.isFrozen) return; // Si está congelado, no se mueve
+        if (enemy.isFrozen) return;
 
         let enemyPosition = enemy.position;
-        let deltaX = playerPosition.x - enemyPosition.x;
-        let deltaY = playerPosition.y - enemyPosition.y;
+        let target = playerPosition;
+        let targetEnemy = null;
+        let isFightingOtherEnemy = false;
+        
+        // ⭐ Si el enemigo está convertido, busca un enemigo no convertido para atacar
+        if (enemy.isConverted) {
+            let minDist = Infinity;
+            for (let otherEnemy of enemies) {
+                if (otherEnemy !== enemy && !otherEnemy.isConverted && !otherEnemy.isFrozen) {
+                    let dx = otherEnemy.position.x - enemyPosition.x;
+                    let dy = otherEnemy.position.y - enemyPosition.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        targetEnemy = otherEnemy;
+                    }
+                }
+            }
+        } 
+        
+        // ⭐ Si el enemigo NO está convertido, busca un enemigo convertido para atacar, si está cerca
+        else {
+            let minDist = Infinity;
+            for (let otherEnemy of enemies) {
+                if (otherEnemy !== enemy && otherEnemy.isConverted && !otherEnemy.isFrozen) {
+                    let dx = otherEnemy.position.x - enemyPosition.x;
+                    let dy = otherEnemy.position.y - enemyPosition.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) { // Distancia para que los enemigos se ataquen entre sí
+                        minDist = dist;
+                        targetEnemy = otherEnemy;
+                    }
+                }
+            }
+        }
+
+        // ⭐ Elige el objetivo final
+        if (targetEnemy) {
+            target = targetEnemy.position;
+            isFightingOtherEnemy = true;
+        } else {
+            target = playerPosition;
+            isFightingOtherEnemy = false;
+        }
+
+        let deltaX = target.x - enemyPosition.x;
+        let deltaY = target.y - enemyPosition.y;
         let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
         if (distance > settings.distanceThreshold) {
             enemy.element.remove();
             enemies = enemies.filter(e => e !== enemy);
         } else {
+            // ⭐ Aplica la ralentización si el enemigo está afligido
+            let currentEnemySpeed = settings.speed;
+            if (enemy.isAfflicted) {
+                const playerSettings = getPlayerSettings(currentPlayerLevel);
+                currentEnemySpeed *= (1 - playerSettings.slowAmount);
+            }
+
             let angle = Math.atan2(deltaY, deltaX);
-            enemyPosition.x += Math.cos(angle) * settings.speed;
-            enemyPosition.y += Math.sin(angle) * settings.speed;
+            enemyPosition.x += Math.cos(angle) * currentEnemySpeed; // Usa currentEnemySpeed
+            enemyPosition.y += Math.sin(angle) * currentEnemySpeed; // Usa currentEnemySpeed
             enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
             enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
             enemy.element.style.transform = `translate(${enemyPosition.x}px, ${enemyPosition.y}px)`;
-            if (distance < 40) takeDamage(5);
+            
+            // ⭐ Aplica el daño si el enemigo está cerca de su objetivo (jugador o enemigo)
+            if (distance < 40) {
+                if (isFightingOtherEnemy) {
+                    const damage = 10; // Daño fijo que se hacen los enemigos entre ellos
+                    targetEnemy.hp -= damage;
+                    showDamage(targetEnemy, damage, true); // ⭐ Añade 'true' para indicar que el daño es entre enemigos
+                    if (targetEnemy.hp <= 0) {
+                        targetEnemy.element.remove();
+                        enemies = enemies.filter(e => e !== targetEnemy);
+                    }
+                } else {
+                    takeDamage(5); // Daño al jugador
+                }
+            }
         }
     });
 }
@@ -296,7 +362,22 @@ function getPlayerSettings(level) {
     const baseFrostballDamage = 20; 
     const baseFrostballSpeed = 8; 
     const baseFrostballRange = 600; 
-    const baseFreezeDuration = 3000; // ⭐ Duración base
+    const baseFreezeDuration = 3000;
+
+    const baseLightballDamage = 10;
+    const baseLightballSpeed = 12;
+    const baseLightballRange = 700;
+    const baseConversionChance = 0.80;
+    const baseConversionDuration = 5000;
+
+    // ⭐ Nuevos valores para Shadowball
+    const baseShadowballDamage = 5;
+    const baseShadowballSpeed = 9;
+    const baseShadowballRange = 650;
+    const baseDotDamage = 10;
+    const baseDotDuration = 4000;
+    const baseSlowAmount = 0.3;
+    const baseSlowDuration = 4000;
 
     const speed = baseSpeed;
     const maxHp = Math.round(baseHp + (level - 1) * 20);
@@ -308,11 +389,30 @@ function getPlayerSettings(level) {
     const frostballDamage = Math.round(baseFrostballDamage + (level - 1) * 25);
     const frostballSpeed = baseFrostballSpeed + (level - 1) * 0.03;
     const frostballRange = baseFrostballRange + (level - 1) * 30;
-    
-    // ⭐ Cálculo para que la duración aumente con el nivel
-    const freezeDuration = baseFreezeDuration + (level - 1) * 500; // +0.5 segundos por nivel
+    const freezeDuration = baseFreezeDuration + (level - 1) * 500;
 
-    return { speed, maxHp, fireballDamage, fireballSpeed, fireballRange, fireRate, frostballDamage, frostballSpeed, frostballRange, freezeDuration };
+    const lightballDamage = Math.round(baseLightballDamage + (level - 1) * 10);
+    const lightballSpeed = baseLightballSpeed + (level - 1) * 0.05;
+    const lightballRange = baseLightballRange + (level - 1) * 50;
+    const conversionChance = Math.min(0.5, baseConversionChance + (level - 1) * 0.01);
+    const conversionDuration = baseConversionDuration + (level - 1) * 500;
+
+    // ⭐ Escalado de los valores de Shadowball
+    const shadowballDamage = Math.round(baseShadowballDamage + (level - 1) * 5);
+    const shadowballSpeed = baseShadowballSpeed + (level - 1) * 0.04;
+    const shadowballRange = baseShadowballRange + (level - 1) * 40;
+    const dotDamage = Math.round(baseDotDamage + (level - 1) * 1);
+    const dotDuration = baseDotDuration + (level - 1) * 200;
+    const slowAmount = Math.min(0.7, baseSlowAmount + (level - 1) * 0.02);
+    const slowDuration = baseSlowDuration + (level - 1) * 200;
+
+    return { 
+        speed, maxHp, 
+        fireballDamage, fireballSpeed, fireballRange, fireRate, 
+        frostballDamage, frostballSpeed, frostballRange, freezeDuration, 
+        lightballDamage, lightballSpeed, lightballRange, conversionChance, conversionDuration,
+        shadowballDamage, shadowballSpeed, shadowballRange, dotDamage, dotDuration, slowAmount, slowDuration
+    };
 }
 
 function updatePlayerLevelDisplay() {
@@ -347,7 +447,14 @@ spellSelector.addEventListener('click', () => {
     if (currentSpell === 'fireball') {
         currentSpell = 'frostball';
         spellSelector.innerText = "Spell: ❄️";
-    } else {
+    } else if (currentSpell === 'frostball') {
+        currentSpell = 'lightball';
+        spellSelector.innerText = "Spell: ✨";
+    } else if (currentSpell === 'lightball') {
+        currentSpell = 'shadowball';
+        spellSelector.innerText = "Spell: 🔮";
+    }
+    else {
         currentSpell = 'fireball';
         spellSelector.innerText = "Spell: 🔥";
     }
@@ -360,10 +467,9 @@ function autoFire() {
     let fireRate = settings.fireRate;
     let targetEnemy = null;
     let minDist = Infinity;
-
+    
     if (enemies.length > 0) {
         if (currentSpell === 'fireball') {
-            // Busca el enemigo más cercano
             for (let enemy of enemies) {
                 let dx = enemy.position.x - playerPosition.x;
                 let dy = enemy.position.y - playerPosition.y;
@@ -373,8 +479,7 @@ function autoFire() {
                     targetEnemy = enemy;
                 }
             }
-        } else { // 'frostball'
-            // Busca el enemigo no congelado más cercano
+        } else if (currentSpell === 'frostball') {
             for (let enemy of enemies) {
                 if (!enemy.isFrozen) {
                     let dx = enemy.position.x - playerPosition.x;
@@ -386,9 +491,35 @@ function autoFire() {
                     }
                 }
             }
+        } else if (currentSpell === 'lightball') {
+            for (let enemy of enemies) {
+                if (!enemy.isConverted) {
+                    let dx = enemy.position.x - playerPosition.x;
+                    let dy = enemy.position.y - playerPosition.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        targetEnemy = enemy;
+                    }
+                }
+            }
+        } else { // 'shadowball'
+            for (let enemy of enemies) {
+                if (!enemy.isAfflicted) {
+                    let dx = enemy.position.x - playerPosition.x;
+                    let dy = enemy.position.y - playerPosition.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        targetEnemy = enemy;
+                    }
+                }
+            }
         }
 
-        const spellRange = currentSpell === 'fireball' ? settings.fireballRange : settings.frostballRange;
+        const spellRange = currentSpell === 'fireball' ? settings.fireballRange : 
+                           (currentSpell === 'frostball' ? settings.frostballRange : 
+                           (currentSpell === 'lightball' ? settings.lightballRange : settings.shadowballRange));
 
         if (targetEnemy && minDist < spellRange) {
             const enemyX_screen = (targetEnemy.position.x * zoomLevel) + cameraX;
@@ -403,14 +534,23 @@ function autoFire() {
     autoFireTimer = setTimeout(autoFire, fireRate);
 }
 
-// ⭐ CREACIÓN de una función `castSpell` genérica que gestiona ambos hechizos
+// ⭐ CREACIÓN de una función `castSpell` genérica que gestiona todos los hechizos
 function castSpell(event) {
     if (paused) return;
 
     const settings = getPlayerSettings(currentPlayerLevel);
-    const isFireball = event.spellType === 'fireball';
+    const spellType = event.spellType;
     const spellDiv = document.createElement('div');
-    spellDiv.classList.add(isFireball ? 'fireball' : 'frostball');
+
+    if (spellType === 'fireball') {
+        spellDiv.classList.add('fireball');
+    } else if (spellType === 'frostball') {
+        spellDiv.classList.add('frostball');
+    } else if (spellType === 'lightball') {
+        spellDiv.classList.add('lightball');
+    } else { // shadowball
+        spellDiv.classList.add('shadowball');
+    }
     
     spellDiv.style.left = `${playerPosition.x + player.offsetWidth / 2 - 10}px`;
     spellDiv.style.top = `${playerPosition.y + player.offsetHeight / 2 - 10}px`;
@@ -424,9 +564,15 @@ function castSpell(event) {
     const dy = mouseY_world - (playerPosition.y + player.offsetHeight / 2);
     const angle = Math.atan2(dy, dx);
 
-    const speed = isFireball ? settings.fireballSpeed : settings.frostballSpeed;
-    const damage = isFireball ? settings.fireballDamage : settings.frostballDamage;
-    const range = isFireball ? settings.fireballRange : settings.frostballRange;
+    const speed = spellType === 'fireball' ? settings.fireballSpeed : 
+                  (spellType === 'frostball' ? settings.frostballSpeed : 
+                  (spellType === 'lightball' ? settings.lightballSpeed : settings.shadowballSpeed));
+    const damage = spellType === 'fireball' ? settings.fireballDamage : 
+                   (spellType === 'frostball' ? settings.frostballDamage : 
+                   (spellType === 'lightball' ? settings.lightballDamage : settings.shadowballDamage));
+    const range = spellType === 'fireball' ? settings.fireballRange : 
+                  (spellType === 'frostball' ? settings.frostballRange : 
+                  (spellType === 'lightball' ? settings.lightballRange : settings.shadowballRange));
     let traveled = 0;
 
     const spellInterval = setInterval(() => {
@@ -443,7 +589,7 @@ function castSpell(event) {
             const dy = y - enemy.position.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < 40) {
-                explode(spellDiv, enemy, damage, isFireball);
+                explode(spellDiv, enemy, damage, spellType);
                 clearInterval(spellInterval);
                 return;
             }
@@ -456,16 +602,19 @@ function castSpell(event) {
     }, 30);
 }
 
-// ⭐ MODIFICACIONES en la función `explode` para manejar el nuevo efecto
-function explode(spellDiv, enemy, damage, isFireball) {
+// ⭐ MODIFICA la función 'explode' para manejar Shadowball y sus efectos
+function explode(spellDiv, enemy, damage, spellType) {
     if (paused) return;
 
     const explosion = document.createElement("div");
     explosion.classList.add("explosion");
     
-    // ⭐ Añade la clase 'frost' si es un Frostball
-    if (!isFireball) {
+    if (spellType === 'frostball') {
         explosion.classList.add('frost');
+    } else if (spellType === 'lightball') {
+        explosion.classList.add('light');
+    } else if (spellType === 'shadowball') {
+        explosion.classList.add('shadow');
     }
 
     explosion.style.left = spellDiv.style.left;
@@ -476,10 +625,20 @@ function explode(spellDiv, enemy, damage, isFireball) {
     enemy.hp -= damage;
     showDamage(enemy, damage);
 
-    // ⭐ Aplica el efecto de congelación si es un Frostball
-    if (!isFireball && !enemy.isFrozen) {
+    if (spellType === 'frostball' && !enemy.isFrozen) {
         const settings = getPlayerSettings(currentPlayerLevel);
         freezeEnemy(enemy, settings.freezeDuration);
+    } 
+    else if (spellType === 'lightball' && !enemy.isConverted) {
+        const settings = getPlayerSettings(currentPlayerLevel);
+        if (Math.random() < settings.conversionChance) {
+            convertEnemy(enemy, settings.conversionDuration);
+        }
+    } 
+    // ⭐ Aplica el efecto de aflicción si es un Shadowball
+    else if (spellType === 'shadowball' && !enemy.isAfflicted) {
+        const settings = getPlayerSettings(currentPlayerLevel);
+        afflictEnemy(enemy, settings.dotDamage, settings.dotDuration, settings.slowDuration);
     }
 
     if (enemy.hp <= 0) {
@@ -495,19 +654,90 @@ function explode(spellDiv, enemy, damage, isFireball) {
 function freezeEnemy(enemy, duration) {
     enemy.isFrozen = true;
     enemy.element.classList.add('frozen');
+    // Si el enemigo está convertido, elimina el efecto de conversión
+    if (enemy.isConverted) {
+        enemy.isConverted = false;
+        enemy.element.classList.remove('converted');
+    }
     setTimeout(() => {
         enemy.isFrozen = false;
         enemy.element.classList.remove('frozen');
     }, duration);
 }
 
+// ⭐ NUEVA FUNCIÓN: Convierte al enemigo por un tiempo
+function convertEnemy(enemy, duration) {
+    enemy.isConverted = true;
+    enemy.element.classList.add('converted');
+    // Si el enemigo está congelado, elimina el efecto de congelación
+    if (enemy.isFrozen) {
+        enemy.isFrozen = false;
+        enemy.element.classList.remove('frozen');
+    }
+    setTimeout(() => {
+        enemy.isConverted = false;
+        enemy.element.classList.remove('converted');
+    }, duration);
+}
+
+// ⭐ NUEVA FUNCIÓN: Aflige al enemigo con daño por tiempo y ralentización
+function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
+    enemy.isAfflicted = true;
+    enemy.element.classList.add('afflicted');
+
+    // Limpia otros efectos si aplica (ej. si está congelado o convertido)
+    if (enemy.isFrozen) {
+        enemy.isFrozen = false;
+        enemy.element.classList.remove('frozen');
+    }
+    if (enemy.isConverted) {
+        enemy.isConverted = false;
+        enemy.element.classList.remove('converted');
+    }
+
+    // ⭐ Daño por tiempo (DoT)
+    const tickInterval = 500; // Daño cada 0.5 segundos
+    let ticks = dotDuration / tickInterval;
+    const dotInterval = setInterval(() => {
+        if (paused || enemy.hp <= 0) {
+            clearInterval(dotInterval);
+            return;
+        }
+        enemy.hp -= dotDamage;
+        showDamage(enemy, dotDamage, false, true); // ⭐ 'true' para indicar daño por tiempo
+        if (enemy.hp <= 0) {
+            enemy.element.remove();
+            enemies = enemies.filter(e => e !== enemy);
+            killCount++;
+            updateHUD();
+            clearInterval(dotInterval);
+        }
+        ticks--;
+        if (ticks <= 0) {
+            clearInterval(dotInterval);
+        }
+    }, tickInterval);
+
+    // ⭐ Duración total de la aflicción (incluye ralentización y efecto visual)
+    setTimeout(() => {
+        enemy.isAfflicted = false;
+        enemy.element.classList.remove('afflicted');
+        // El intervalo de DoT ya se habrá limpiado por su propio contador
+    }, slowDuration); // Usamos slowDuration como duración total del efecto visual/ralentización
+}
+
 // --- Numeritos flotantes ---
-function showDamage(enemy, amount) {
+function showDamage(enemy, amount, isConvertedDamage = false, isDotDamage = false) {
     if (paused) return;
 
     const dmg = document.createElement("div");
     dmg.classList.add("damage-text");
     dmg.innerText = `-${amount}`;
+    if (isConvertedDamage) {
+        dmg.classList.add('converted');
+    } else if (isDotDamage) {
+        dmg.classList.add('dot');
+    }
     gameContainer.appendChild(dmg);
 
     // ⭐ CORRECCIÓN: POSICIONA CON LEFT Y TOP, NO CON TRANSFORM
@@ -653,17 +883,22 @@ gameContainer.addEventListener('touchend', (e) => {
     }
 });
 
-// --- Lógica para el cambio de personaje ---
+// ⭐ NUEVA LÓGICA: Array de personajes y un índice para ciclar
+const characters = [
+    { name: 'Mage', src: 'char_mage.svg' },
+    { name: 'Sorceress', src: 'char_sorceress.svg' },
+    { name: 'Cleric', src: 'char_cleric.svg' },
+    { name: 'Witch', src: 'char_witch.svg' }
+];
+
+let characterIndex = 0;
+
 const characterSelector = document.getElementById('characterSelector');
 characterSelector.addEventListener('click', () => {
-    if (isMago) {
-        playerSprite.src = "char_mago_f.svg";
-        characterSelector.innerText = "Sorceress";
-    } else {
-        playerSprite.src = "char_mago_m.svg";
-        characterSelector.innerText = "Mage";
-    }
-    isMago = !isMago;
+    characterIndex = (characterIndex + 1) % characters.length;
+    const newCharacter = characters[characterIndex];
+    playerSprite.src = newCharacter.src;
+    characterSelector.innerText = newCharacter.name;
 });
 
 // --- Bucle principal ---

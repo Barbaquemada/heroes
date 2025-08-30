@@ -237,3 +237,103 @@ body, html {
   transition: transform 0.2s ease-in-out;
   font-family: 'Roboto Mono', monospace;
 }
+
+
+/* ⭐ Nuevo estilo para el Lightball */
+.lightball {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #FFFFE0 60%, #FFD700); /* Amarillo claro a dorado */
+  border-radius: 50%;
+}
+
+/* ⭐ Nueva clase para la explosión de Lightball */
+.explosion.light {
+  background: radial-gradient(circle, #FFFFE0, #FFD700, transparent); /* Amarillo claro a dorado */
+}
+
+/* ⭐ Estilo del círculo de conversión */
+.enemy.converted::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  
+  /* Gradiente radial para el relleno amarillo */
+  background: radial-gradient(circle, rgba(255, 255, 128, 0.6) 0%, rgba(255, 215, 0, 0.6) 70%); /* Amarillo suave a dorado con opacidad */
+  
+  /* Borde dorado con box-shadow */
+  box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.8), 
+              inset 0 0 5px rgba(255, 215, 0, 0.5); 
+  
+  z-index: -1;
+  opacity: 0;
+  transform: scale(0.2); 
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* ⭐ Cuando el enemigo está convertido, el círculo se hace visible */
+.enemy.converted::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ⭐ Cambia el color del texto de daño para los enemigos convertidos */
+.damage-text.converted {
+    color: #FFD700; /* Dorado para el daño entre enemigos */
+}
+
+/* Añade esto al final de tu archivo style.css */
+
+/* ⭐ Nuevo estilo para el Shadowball */
+.shadowball {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #8A2BE2 60%, #4B0082); /* Azul violeta a índigo oscuro */
+  border-radius: 50%;
+}
+
+/* ⭐ Nueva clase para la explosión de Shadowball */
+.explosion.shadow {
+  background: radial-gradient(circle, #8A2BE2, #4B0082, transparent); /* Azul violeta a índigo oscuro */
+}
+
+/* ⭐ Estilo del efecto de aflicción */
+.enemy.afflicted::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  
+  /* Gradiente radial para el relleno morado oscuro */
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.5) 0%, rgba(75, 0, 130, 0.6) 70%); /* Morado suave a oscuro con opacidad */
+  
+  /* Borde morado oscuro con box-shadow */
+  box-shadow: 0 0 10px 3px rgba(75, 0, 130, 0.8), 
+              inset 0 0 5px rgba(75, 0, 130, 0.5); 
+  
+  z-index: -1;
+  opacity: 0;
+  transform: scale(0.2); 
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* ⭐ Cuando el enemigo está afligido, el círculo se hace visible */
+.enemy.afflicted::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ⭐ Cambia el color del texto de daño por tiempo (puedes usar el mismo morado si quieres) */
+.damage-text.dot {
+    color: #8A2BE2; /* Un morado vibrante para el daño por tiempo */
+    font-size: 1.1em; /* Un poco más grande para distinguirlo */
+}
