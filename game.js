@@ -28,10 +28,10 @@ let isMago = true;
 let pauseOverlay = document.createElement("div");
 pauseOverlay.innerText = "⏸ PAUSE";
 pauseOverlay.style.position = "absolute";
-pauseOverlay.style.top = "50%";
+pauseOverlay.style.top = "90%";
 pauseOverlay.style.left = "50%";
 pauseOverlay.style.transform = "translate(-50%, -50%)";
-pauseOverlay.style.fontSize = "64px";
+pauseOverlay.style.fontSize = "18px";
 pauseOverlay.style.fontWeight = "bold";
 pauseOverlay.style.color = "gold";
 pauseOverlay.style.textShadow = "2px 2px 8px black";
@@ -193,17 +193,23 @@ const monsterLevelDisplay = document.getElementById('monsterLevelDisplay');
 const monsterLevelUpButton = document.getElementById('monsterLevelUp');
 const monsterLevelDownButton = document.getElementById('monsterLevelDown');
 
+// ⭐ NUEVA FUNCIÓN: Calcula el radio de colisión del monstruo
+function getMonsterRadius(enemy) {
+    const baseSize = 50; // El tamaño base de tu monstruo
+    return (baseSize * enemy.gigantismFactor) / 2;
+}
+
 function getMonsterSettings(level) {
     const baseSpeed = 2;
     const baseHp = 50;
     const baseSpawnChance = 0.80;
-    const baseDistanceThreshold = 500;
+    const baseDistanceThreshold = 600;
     const baseMaxEnemies = 100;
 
     const speed = baseSpeed + (level - 1) * 0.005;
     const hp = baseHp * (1 + (level - 1) * 0.50);
     const spawnChance = Math.min(0.5, baseSpawnChance + (level - 1) * 0.05);
-    const distanceThreshold = baseDistanceThreshold + (level - 1) * 50;
+    const distanceThreshold = baseDistanceThreshold + (level - 1) * 2;
 
     return { speed, hp, spawnChance, distanceThreshold, maxEnemies: baseMaxEnemies };
 }
@@ -226,6 +232,25 @@ monsterLevelDownButton.addEventListener('click', () => {
 
 updateMonsterLevelDisplay();
 
+// ⭐ NUEVA FUNCIÓN: Calcula el factor de gigantismo
+function getGigantismFactor() {
+    const minFactor = 1;
+    const maxFactor = 10;
+    const randomValue = Math.random();
+
+    // Lógica para que los factores más grandes sean más raros
+    if (randomValue < 0.9) {
+        return minFactor; // 90% de probabilidad de ser tamaño normal
+    } else if (randomValue < 0.99) {
+        return Math.floor(Math.random() * 3) + 2; // 9% de 2x a 4x
+    } else if (randomValue < 0.999) {
+        return Math.floor(Math.random() * 3) + 5; // 0.9% de 5x a 7x
+    } else {
+        return Math.floor(Math.random() * 3) + 8; // 0.1% de 8x a 10x
+    }
+}
+
+// ⭐ FUNCIÓN CORREGIDA: Ahora los monstruos se posicionan correctamente
 function spawnEnemy() {
     if (paused) return;
 
@@ -239,20 +264,42 @@ function spawnEnemy() {
             ey = Math.random() * (BOARD_HEIGHT - 50);
         } while (Math.abs(ex - playerPosition.x) < spawnDist && Math.abs(ey - playerPosition.y) < spawnDist);
 
+        const gigantismFactor = getGigantismFactor();
+        const isGiant = gigantismFactor > 1;
+
         let enemy = document.createElement('div');
         enemy.classList.add('enemy');
         enemy.style.backgroundImage = 'url("monstruo.svg")';
         enemy.style.backgroundSize = 'cover';
         enemy.style.position = 'absolute';
+        
+        // ⭐ Corregido: Usamos left y top para el posicionamiento
+        enemy.style.left = `${ex}px`;
+        enemy.style.top = `${ey}px`;
 
-        enemy.style.transform = `translate(${ex}px, ${ey}px)`; 
+        if (isGiant) {
+            enemy.classList.add('giant');
+            // ⭐ Corregido: Solo aplicamos el scale en el transform
+            enemy.style.transform = `scale(${gigantismFactor})`; 
+        }
+
+        const finalHp = settings.hp * Math.pow(gigantismFactor, 2);
         gameContainer.appendChild(enemy);
 
-        // ⭐ Añade las propiedades isFrozen, isConverted e isAfflicted al enemigo
-        enemies.push({ element: enemy, position: { x: ex, y: ey }, hp: settings.hp, isFrozen: false, isConverted: false, isAfflicted: false });
+        enemies.push({ 
+            element: enemy, 
+            position: { x: ex, y: ey }, 
+            hp: finalHp, 
+            isFrozen: false, 
+            isConverted: false, 
+            isAfflicted: false,
+            gigantismFactor: gigantismFactor,
+            isGiant: isGiant
+        });
     }
 }
 
+// ⭐ FUNCIÓN CORREGIDA: Ahora los monstruos se mueven correctamente
 function moveEnemies() {
     if (paused) return;
     const settings = getMonsterSettings(currentMonsterLevel);
@@ -313,24 +360,33 @@ function moveEnemies() {
             enemy.element.remove();
             enemies = enemies.filter(e => e !== enemy);
         } else {
-            // ⭐ Aplica la ralentización si el enemigo está afligido
-            let currentEnemySpeed = settings.speed;
+            // ⭐ Aplica la ralentización si el enemigo está afligido o es gigante
+            let currentEnemySpeed = settings.speed / enemy.gigantismFactor;
             if (enemy.isAfflicted) {
                 const playerSettings = getPlayerSettings(currentPlayerLevel);
                 currentEnemySpeed *= (1 - playerSettings.slowAmount);
             }
 
             let angle = Math.atan2(deltaY, deltaX);
-            enemyPosition.x += Math.cos(angle) * currentEnemySpeed; // Usa currentEnemySpeed
-            enemyPosition.y += Math.sin(angle) * currentEnemySpeed; // Usa currentEnemySpeed
-            enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - 50, enemyPosition.x));
-            enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - 50, enemyPosition.y));
-            enemy.element.style.transform = `translate(${enemyPosition.x}px, ${enemyPosition.y}px)`;
+            enemyPosition.x += Math.cos(angle) * currentEnemySpeed;
+            enemyPosition.y += Math.sin(angle) * currentEnemySpeed;
+            
+            // ⭐ Limitar al tablero considerando el tamaño escalado del monstruo
+            const enemySize = 50 * enemy.gigantismFactor;
+            enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - enemySize, enemyPosition.x));
+            enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - enemySize, enemyPosition.y));
+            
+            // ⭐ Corregido: Ahora usamos left y top para el movimiento
+            enemy.element.style.left = `${enemyPosition.x}px`;
+            enemy.element.style.top = `${enemyPosition.y}px`;
             
             // ⭐ Aplica el daño si el enemigo está cerca de su objetivo (jugador o enemigo)
-            if (distance < 40) {
+            // ⭐ NUEVA LÓGICA DE COLISIÓN DE ATAQUE DEL MONSTRUO
+            const monsterRadius = getMonsterRadius(enemy);
+            const attackThreshold = monsterRadius * 0.9;
+            if (distance < attackThreshold) {
                 if (isFightingOtherEnemy) {
-                    const damage = 10; // Daño fijo que se hacen los enemigos entre ellos
+                    const damage = 10 * enemy.gigantismFactor; // Daño fijo que se hacen los enemigos entre ellos
                     targetEnemy.hp -= damage;
                     showDamage(targetEnemy, damage, true); // ⭐ Añade 'true' para indicar que el daño es entre enemigos
                     if (targetEnemy.hp <= 0) {
@@ -338,7 +394,10 @@ function moveEnemies() {
                         enemies = enemies.filter(e => e !== targetEnemy);
                     }
                 } else {
-                    takeDamage(5); // Daño al jugador
+                    // ⭐ NUEVO BLOQUE: Escalado de daño del monstruo más suave
+                    const gigantismDamageFactor = 0.5;
+                    const finalDamage = 5 + (enemy.gigantismFactor - 1) * gigantismDamageFactor;
+                    takeDamage(finalDamage);
                 }
             }
         }
@@ -588,7 +647,11 @@ function castSpell(event) {
             const dx = x - enemy.position.x;
             const dy = y - enemy.position.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 40) {
+            // ⭐ NUEVA LÓGICA DE COLISIÓN DE HECHIZO
+            const monsterRadius = getMonsterRadius(enemy);
+            const spellThreshold = monsterRadius * 1.1;
+
+            if (dist < spellThreshold) {
                 explode(spellDiv, enemy, damage, spellType);
                 clearInterval(spellInterval);
                 return;
@@ -606,6 +669,9 @@ function castSpell(event) {
 function explode(spellDiv, enemy, damage, spellType) {
     if (paused) return;
 
+    // NO MODIFICAR el daño. El daño es el daño base, no se multiplica por gigantismo
+    let finalDamage = damage;
+
     const explosion = document.createElement("div");
     explosion.classList.add("explosion");
     
@@ -622,8 +688,8 @@ function explode(spellDiv, enemy, damage, spellType) {
     gameContainer.appendChild(explosion);
     setTimeout(() => explosion.remove(), 500);
 
-    enemy.hp -= damage;
-    showDamage(enemy, damage);
+    enemy.hp -= finalDamage;
+    showDamage(enemy, finalDamage);
 
     if (spellType === 'frostball' && !enemy.isFrozen) {
         const settings = getPlayerSettings(currentPlayerLevel);
@@ -635,7 +701,6 @@ function explode(spellDiv, enemy, damage, spellType) {
             convertEnemy(enemy, settings.conversionDuration);
         }
     } 
-    // ⭐ Aplica el efecto de aflicción si es un Shadowball
     else if (spellType === 'shadowball' && !enemy.isAfflicted) {
         const settings = getPlayerSettings(currentPlayerLevel);
         afflictEnemy(enemy, settings.dotDamage, settings.dotDuration, settings.slowDuration);
@@ -740,8 +805,9 @@ function showDamage(enemy, amount, isConvertedDamage = false, isDotDamage = fals
     }
     gameContainer.appendChild(dmg);
 
-    // ⭐ CORRECCIÓN: POSICIONA CON LEFT Y TOP, NO CON TRANSFORM
-    dmg.style.left = `${enemy.position.x + 10}px`;
+    // ⭐ CORRECCIÓN: POSICIONA CON LEFT Y TOP, NO CON TRANSFORM, y considera el gigantismo
+    const enemySize = 50 * enemy.gigantismFactor;
+    dmg.style.left = `${enemy.position.x + (enemySize / 2) - 10}px`;
     dmg.style.top = `${enemy.position.y - 10}px`;
 
     setTimeout(() => dmg.remove(), 800);
