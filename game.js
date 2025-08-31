@@ -392,6 +392,8 @@ function moveEnemies() {
                     if (targetEnemy.hp <= 0) {
                         targetEnemy.element.remove();
                         enemies = enemies.filter(e => e !== targetEnemy);
+            killCount++;
+            updateHUD();
                     }
                 } else {
                     // ⭐ NUEVO BLOQUE: Escalado de daño del monstruo más suave
