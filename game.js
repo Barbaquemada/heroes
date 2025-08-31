@@ -435,7 +435,7 @@ function getPlayerSettings(level) {
     const baseShadowballRange = 650;
     const baseDotDamage = 10;
     const baseDotDuration = 4000;
-    const baseSlowAmount = 0.3;
+    const baseSlowAmount = 0.6;
     const baseSlowDuration = 4000;
 
     const speed = baseSpeed;
@@ -462,7 +462,7 @@ function getPlayerSettings(level) {
     const shadowballRange = baseShadowballRange + (level - 1) * 40;
     const dotDamage = Math.round(baseDotDamage + (level - 1) * 1);
     const dotDuration = baseDotDuration + (level - 1) * 200;
-    const slowAmount = Math.min(0.7, baseSlowAmount + (level - 1) * 0.02);
+    const slowAmount = Math.min(0.9, baseSlowAmount + (level - 1) * 0.02);
     const slowDuration = baseSlowDuration + (level - 1) * 200;
 
     return { 
@@ -746,6 +746,7 @@ function convertEnemy(enemy, duration) {
 }
 
 // ⭐ NUEVA FUNCIÓN: Aflige al enemigo con daño por tiempo y ralentización
+// ⭐ NUEVA FUNCIÓN: Aflige al enemigo con daño por tiempo y ralentización
 function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
     enemy.isAfflicted = true;
     enemy.element.classList.add('afflicted');
@@ -768,8 +769,26 @@ function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
             clearInterval(dotInterval);
             return;
         }
+
         enemy.hp -= dotDamage;
-        showDamage(enemy, dotDamage, false, true); // ⭐ 'true' para indicar daño por tiempo
+        showDamage(enemy, dotDamage, false, true);
+
+        // ⭐ Lógica de contagio movida aquí para que se ejecute en cada tick
+        const contagionChance = 0.8; // 80% de probabilidad de contagio
+        const contagionRadius = 100; // Radio en píxeles para el contagio
+
+        for (const otherEnemy of enemies) {
+            if (otherEnemy !== enemy && !otherEnemy.isAfflicted && otherEnemy.hp > 0) {
+                const dx = enemy.position.x - otherEnemy.position.x;
+                const dy = enemy.position.y - otherEnemy.position.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < contagionRadius && Math.random() < contagionChance) {
+                    afflictEnemy(otherEnemy, dotDamage, dotDuration, slowDuration);
+                }
+            }
+        }
+        
         if (enemy.hp <= 0) {
             enemy.element.remove();
             enemies = enemies.filter(e => e !== enemy);
@@ -787,8 +806,7 @@ function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
     setTimeout(() => {
         enemy.isAfflicted = false;
         enemy.element.classList.remove('afflicted');
-        // El intervalo de DoT ya se habrá limpiado por su propio contador
-    }, slowDuration); // Usamos slowDuration como duración total del efecto visual/ralentización
+    }, slowDuration);
 }
 
 // --- Numeritos flotantes ---
