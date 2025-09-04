@@ -65,6 +65,56 @@ let keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
+// ⭐ NUEVA LÓGICA: Array de personajes y un índice para ciclar
+const characters = [
+    { name: 'Mage', src: 'char_mage.svg' },
+    { name: 'Sorceress', src: 'char_sorceress.svg' },
+    { name: 'Cleric', src: 'char_cleric.svg' },
+    { name: 'Witch', src: 'char_witch.svg' },
+    { name: 'Ranger', src: 'char_ranger.svg' },
+    { name: 'Forestlord', src: 'char_forestlord.svg' }
+];
+
+let characterIndex = 0;
+
+function changeCharacterAndSpell() {
+    characterIndex = (characterIndex + 1) % characters.length;
+    const newCharacter = characters[characterIndex];
+    playerSprite.src = newCharacter.src;
+    characterSelector.innerText = newCharacter.name;
+
+    switch (newCharacter.name) {
+        case 'Mage':
+            currentSpell = 'fireball';
+            spellSelector.innerText = "Spell: 🔥";
+            break;
+        case 'Sorceress':
+            currentSpell = 'frostball';
+            spellSelector.innerText = "Spell: ❄️";
+            break;
+        case 'Cleric':
+            currentSpell = 'lightball';
+            spellSelector.innerText = "Spell: ✨";
+            break;
+        case 'Witch':
+            currentSpell = 'shadowball';
+            spellSelector.innerText = "Spell: 🔮";
+            break;
+        case 'Ranger':
+            currentSpell = 'windshot';
+            spellSelector.innerText = "Spell: 🌬️";
+            break;
+        case 'Forestlord':
+            currentSpell = 'natureball';
+            spellSelector.innerText = "Spell: 🌿";
+            break;
+    }
+}
+
+characterSelector.addEventListener('click', changeCharacterAndSpell);
+
+
+
 // --- Configuración del tablero fijo ---
 const CELL_SIZE = 50;
 const GRID_COLS = 50;
@@ -449,6 +499,13 @@ function getPlayerSettings(level) {
     const baseEntangleChance = 0.5;
     const baseNatureDotDamage = 5;
 
+const baseWindshotSpeed = 15;
+const baseWindshotRange = 800;
+const baseWindshotDamage = 10; // Daño por cada impacto
+const baseWindshotChains = 3; // Número de cadenas (ramificaciones)
+const baseWindshotChainRange = 300; // Rango para encontrar al siguiente objetivo
+
+
     const speed = baseSpeed;
     const maxHp = Math.round(baseHp + (level - 1) * 20);
     const fireballDamage = Math.round(baseFireballDamage + (level - 1) * 50);
@@ -483,13 +540,20 @@ function getPlayerSettings(level) {
     const entangleDuration = baseEntangleDuration + (level - 1) * 150;
     const entangleChance = Math.min(0.9, baseEntangleChance + (level - 1) * 0.02);
 
+const windshotSpeed = baseWindshotSpeed + (level - 1) * 0.1;
+const windshotRange = baseWindshotRange + (level - 1) * 70;
+const windshotDamage = Math.round(baseWindshotDamage + (level - 1) * 35);
+const windshotChains = baseWindshotChains + Math.floor((level - 1) / 5); // Aumenta una cadena cada 5 niveles
+const windshotChainRange = baseWindshotChainRange + (level - 1) * 20;
+
     return { 
         speed, maxHp, 
         fireballDamage, fireballSpeed, fireballRange, fireRate, 
         frostballDamage, frostballSpeed, frostballRange, freezeDuration, 
         lightballDamage, lightballSpeed, lightballRange, conversionChance, conversionDuration,
         shadowballDamage, shadowballSpeed, shadowballRange, dotDamage, dotDuration, slowAmount, slowDuration,
-        natureballDamage, natureballSpeed, natureballRange, entangleDuration, entangleChance, natureDotDamage
+        natureballDamage, natureballSpeed, natureballRange, entangleDuration, entangleChance, natureDotDamage,
+windshotSpeed, windshotRange, windshotDamage, windshotChains, windshotChainRange
     };
 }
 
@@ -520,26 +584,6 @@ playerLevelDownButton.addEventListener('click', () => {
 
 updatePlayerLevelDisplay();
 
-// ⭐ Lógica para cambiar de hechizo
-spellSelector.addEventListener('click', () => {
-    if (currentSpell === 'fireball') {
-        currentSpell = 'frostball';
-        spellSelector.innerText = "Spell: ❄️";
-    } else if (currentSpell === 'frostball') {
-        currentSpell = 'lightball';
-        spellSelector.innerText = "Spell: ✨";
-    } else if (currentSpell === 'lightball') {
-        currentSpell = 'shadowball';
-        spellSelector.innerText = "Spell: 🔮";
-    } else if (currentSpell === 'shadowball') {
-        currentSpell = 'natureball';
-        spellSelector.innerText = "Spell: 🌿";
-    } else {
-        currentSpell = 'fireball';
-        spellSelector.innerText = "Spell: 🔥";
-    }
-});
-
 // --- Disparo automático para PC y móvil ---
 function autoFire() {
     if (paused || gameOver) return;
@@ -549,70 +593,29 @@ function autoFire() {
     let minDist = Infinity;
     
     if (enemies.length > 0) {
-        if (currentSpell === 'fireball') {
-            for (let enemy of enemies) {
-                let dx = enemy.position.x - playerPosition.x;
-                let dy = enemy.position.y - playerPosition.y;
-                let dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < minDist) {
-                    minDist = dist;
-                    targetEnemy = enemy;
-                }
-            }
-        } else if (currentSpell === 'frostball') {
-            for (let enemy of enemies) {
-                if (!enemy.isFrozen) {
-                    let dx = enemy.position.x - playerPosition.x;
-                    let dy = enemy.position.y - playerPosition.y;
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        targetEnemy = enemy;
-                    }
-                }
-            }
-        } else if (currentSpell === 'lightball') {
-            for (let enemy of enemies) {
-                if (!enemy.isConverted) {
-                    let dx = enemy.position.x - playerPosition.x;
-                    let dy = enemy.position.y - playerPosition.y;
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        targetEnemy = enemy;
-                    }
-                }
-            }
-        } else if (currentSpell === 'shadowball') {
-            for (let enemy of enemies) {
-                if (!enemy.isAfflicted) {
-                    let dx = enemy.position.x - playerPosition.x;
-                    let dy = enemy.position.y - playerPosition.y;
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        targetEnemy = enemy;
-                    }
-                }
-            }
-        } else { // 'natureball'
-            for (let enemy of enemies) {
-                if (!enemy.isEntangled) {
-                    let dx = enemy.position.x - playerPosition.x;
-                    let dy = enemy.position.y - playerPosition.y;
-                    let dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        targetEnemy = enemy;
-                    }
-                }
-            }
+        // ⭐ Busca el enemigo más cercano de forma genérica para todos los hechizos
+        let sortedEnemies = [...enemies].sort((a, b) => {
+            const distA = Math.sqrt(Math.pow(a.position.x - playerPosition.x, 2) + Math.pow(a.position.y - playerPosition.y, 2));
+            const distB = Math.sqrt(Math.pow(b.position.x - playerPosition.x, 2) + Math.pow(b.position.y - playerPosition.y, 2));
+            return distA - distB;
+        });
+
+        // ⭐ Lógica específica de cada hechizo para seleccionar el objetivo
+        if (currentSpell === 'fireball' || currentSpell === 'frostball' || currentSpell === 'lightball' || currentSpell === 'shadowball' || currentSpell === 'windshot') {
+            targetEnemy = sortedEnemies[0];
+        } else if (currentSpell === 'natureball') {
+            targetEnemy = sortedEnemies.find(enemy => !enemy.isEntangled);
+        }
+
+        if (targetEnemy) {
+            minDist = Math.sqrt(Math.pow(targetEnemy.position.x - playerPosition.x, 2) + Math.pow(targetEnemy.position.y - playerPosition.y, 2));
         }
 
         const spellRange = currentSpell === 'fireball' ? settings.fireballRange : 
                            (currentSpell === 'frostball' ? settings.frostballRange : 
                            (currentSpell === 'lightball' ? settings.lightballRange : 
-                           (currentSpell === 'shadowball' ? settings.shadowballRange : settings.natureballRange)));
+                           (currentSpell === 'shadowball' ? settings.shadowballRange : 
+                           (currentSpell === 'natureball' ? settings.natureballRange : settings.windshotRange)))); // ⭐ Añade Windshot
 
         if (targetEnemy && minDist < spellRange) {
             const enemyX_screen = (targetEnemy.position.x * zoomLevel) + cameraX;
@@ -633,8 +636,33 @@ function castSpell(event) {
 
     const settings = getPlayerSettings(currentPlayerLevel);
     const spellType = event.spellType;
-    const spellDiv = document.createElement('div');
+    
+    // ⭐ Lógica específica para Windshot
+    if (spellType === 'windshot') {
+        let targetEnemy = null;
+        let minDist = Infinity;
+        for (let enemy of enemies) {
+            const dx = enemy.position.x - playerPosition.x;
+            const dy = enemy.position.y - playerPosition.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDist) {
+                minDist = dist;
+                targetEnemy = enemy;
+            }
+        }
+        if (targetEnemy) {
+            // ⭐ Pasa la posición central del jugador a la función castWindshot
+            const centeredPlayerPosition = { 
+                x: playerPosition.x + player.offsetWidth / 2, 
+                y: playerPosition.y + player.offsetHeight / 2 
+            };
+            castWindshot(centeredPlayerPosition, targetEnemy);
+        }
+        return;
+    }
 
+    // ⭐ Lógica para el resto de hechizos (Fireball, Frostball, etc.)
+    const spellDiv = document.createElement('div');
     if (spellType === 'fireball') {
         spellDiv.classList.add('fireball');
     } else if (spellType === 'frostball') {
@@ -674,7 +702,9 @@ function castSpell(event) {
     let traveled = 0;
 
     const spellInterval = setInterval(() => {
-        if (paused) return;
+        if (paused) {
+            return; // ⭐ CÓDIGO CORREGIDO: solo detiene el movimiento, no elimina el hechizo.
+        }
 
         const x = parseInt(spellDiv.style.left) + Math.cos(angle) * speed;
         const y = parseInt(spellDiv.style.top) + Math.sin(angle) * speed;
@@ -704,6 +734,92 @@ function castSpell(event) {
     }, 30);
 }
 
+// ⭐ NUEVA FUNCIÓN: Lanza un Windshot que puede ramificarse
+function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chainCount = 0) {
+    if (paused) return;
+
+    const settings = getPlayerSettings(currentPlayerLevel);
+    const spellDiv = document.createElement('div');
+    spellDiv.classList.add('windshot');
+    gameContainer.appendChild(spellDiv);
+
+    let targetEnemy = initialTargetEnemy;
+    let isChainedShot = chainCount > 0;
+
+    // Si es una ramificación, busca el siguiente enemigo más cercano que no se haya usado
+    if (isChainedShot) {
+        let minDist = Infinity;
+        targetEnemy = null;
+        for (let enemy of enemies) {
+            if (!usedEnemies.has(enemy)) {
+                const dx = enemy.position.x - origin.x;
+                const dy = enemy.position.y - origin.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < minDist && dist < settings.windshotChainRange) {
+                    minDist = dist;
+                    targetEnemy = enemy;
+                }
+            }
+        }
+    }
+
+    // Si no hay objetivo, el hechizo se disipa
+    if (!targetEnemy) {
+        spellDiv.remove();
+        return;
+    }
+
+    // Añade el enemigo actual al set de enemigos usados para no atacarlo de nuevo
+    usedEnemies.add(targetEnemy);
+
+    // Posición inicial y ángulo hacia el objetivo
+    const startX = origin.x;
+    const startY = origin.y;
+    spellDiv.style.left = `${startX}px`;
+    spellDiv.style.top = `${startY}px`;
+
+    const dx = targetEnemy.position.x - startX;
+    const dy = targetEnemy.position.y - startY;
+    const angle = Math.atan2(dy, dx);
+    const speed = settings.windshotSpeed;
+
+    const spellInterval = setInterval(() => {
+        if (paused) {
+            //clearInterval(spellInterval);
+            return;
+        }
+
+        const x = parseFloat(spellDiv.style.left) + Math.cos(angle) * speed;
+        const y = parseFloat(spellDiv.style.top) + Math.sin(angle) * speed;
+        spellDiv.style.left = `${x}px`;
+        spellDiv.style.top = `${y}px`;
+
+        // Verificación de colisión
+        const dist = Math.sqrt(Math.pow(x - targetEnemy.position.x, 2) + Math.pow(y - targetEnemy.position.y, 2));
+        const monsterRadius = getMonsterRadius(targetEnemy);
+        const spellThreshold = monsterRadius;
+
+        if (dist < spellThreshold) {
+            // Impacto!
+            explode(spellDiv, targetEnemy, settings.windshotDamage, 'windshot');
+
+            // ⭐ Reacción en cadena
+            if (chainCount < settings.windshotChains) {
+                castWindshot(targetEnemy.position, null, usedEnemies, chainCount + 1);
+            }
+
+            clearInterval(spellInterval);
+            return;
+        }
+
+        // Si se pasa del rango, se elimina
+        if (Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2)) > settings.windshotRange) {
+            spellDiv.remove();
+            clearInterval(spellInterval);
+        }
+    }, 10);
+}
+
 // ⭐ MODIFICA la función 'explode' para manejar Shadowball y sus efectos
 function explode(spellDiv, enemy, damage, spellType) {
     if (paused) return;
@@ -714,15 +830,18 @@ function explode(spellDiv, enemy, damage, spellType) {
     const explosion = document.createElement("div");
     explosion.classList.add("explosion");
     
-if (spellType === 'frostball') {
-    explosion.classList.add('frost');
-} else if (spellType === 'lightball') {
-    explosion.classList.add('light');
-} else if (spellType === 'shadowball') {
-    explosion.classList.add('shadow');
-} else if (spellType === 'natureball') {
-    explosion.classList.add('nature');
-}
+    // ⭐ Añade el estilo de la explosión para el Windshot
+    if (spellType === 'frostball') {
+        explosion.classList.add('frost');
+    } else if (spellType === 'lightball') {
+        explosion.classList.add('light');
+    } else if (spellType === 'shadowball') {
+        explosion.classList.add('shadow');
+    } else if (spellType === 'natureball') {
+        explosion.classList.add('nature');
+    } else if (spellType === 'windshot') { // ⭐ Lógica para Windshot
+        explosion.classList.add('wind');
+    }
 
     explosion.style.left = spellDiv.style.left;
     explosion.style.top = spellDiv.style.top;
@@ -746,7 +865,7 @@ if (spellType === 'frostball') {
         const settings = getPlayerSettings(currentPlayerLevel);
         afflictEnemy(enemy, settings.dotDamage, settings.dotDuration, settings.slowDuration);
     
-} else if (spellType === 'natureball' && !enemy.isEntangled) {
+    } else if (spellType === 'natureball' && !enemy.isEntangled) {
         const settings = getPlayerSettings(currentPlayerLevel);
         if (Math.random() < settings.entangleChance) {
             entangleEnemy(enemy, settings.entangleDuration);
@@ -1094,25 +1213,7 @@ gameContainer.addEventListener('touchend', (e) => {
     }
 });
 
-// ⭐ NUEVA LÓGICA: Array de personajes y un índice para ciclar
-const characters = [
-    { name: 'Mage', src: 'char_mage.svg' },
-    { name: 'Sorceress', src: 'char_sorceress.svg' },
-    { name: 'Cleric', src: 'char_cleric.svg' },
-    { name: 'Witch', src: 'char_witch.svg' },
-    { name: 'Ranger', src: 'char_ranger.svg' },
-    { name: 'Forestlord', src: 'char_forestlord.svg' }
-];
 
-let characterIndex = 0;
-
-const characterSelector = document.getElementById('characterSelector');
-characterSelector.addEventListener('click', () => {
-    characterIndex = (characterIndex + 1) % characters.length;
-    const newCharacter = characters[characterIndex];
-    playerSprite.src = newCharacter.src;
-    characterSelector.innerText = newCharacter.name;
-});
 
 // --- Bucle principal ---
 function gameLoop() {
@@ -1129,3 +1230,16 @@ function gameLoop() {
 gameLoop();
 autoFire();
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// ⭐ Cambia de personaje con la barra espaciadora
+document.addEventListener('keydown', (event) => {
+    if (event.code === 'Space') {
+        changeCharacterAndSpell();
+    }
+});
+
+// ⭐ Cambia de personaje con el clic derecho del ratón
+document.addEventListener('contextmenu', (event) => {
+    event.preventDefault(); // Evita que se muestre el menú contextual del navegador
+    changeCharacterAndSpell();
+});

@@ -388,3 +388,17 @@ body, html {
     color: #3CB371; /* Un verde vibrante para el daño por tiempo de naturaleza */
     font-size: 1.1em; /* Un poco más grande para distinguirlo */
 }
+
+/* ⭐ Nuevo estilo para el Windshot */
+.windshot {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  background: radial-gradient(circle, #E0FFFF 60%, #FFFFFF); /* Blanco muy claro a blanco */
+  border-radius: 50%;
+}
+
+/* ⭐ Nueva clase para la explosión de Windshot */
+.explosion.wind {
+  background: radial-gradient(circle, #E0FFFF, #FFFFFF, transparent); /* Blanco a transparente */
+}
