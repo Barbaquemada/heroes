@@ -339,3 +339,52 @@ body, html {
     color: #8A2BE2; /* Un morado vibrante para el daño por tiempo */
     font-size: 1.1em; /* Un poco más grande para distinguirlo */
 }
+
+/* ⭐ Nuevo estilo para el Natureball */
+.natureball {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #98FB98 60%, #228B22); /* Verde claro a verde oscuro */
+  border-radius: 50%;
+}
+
+/* ⭐ Nueva clase para la explosión de Natureball */
+.explosion.nature {
+  background: radial-gradient(circle, #98FB98, #228B22, transparent); /* Verde claro a verde oscuro */
+}
+
+/* ⭐ Estilo del efecto de enredado */
+.enemy.entangled::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+
+  /* Gradiente radial para el relleno verde oscuro */
+  background: radial-gradient(circle, rgba(152, 251, 152, 0.5) 0%, rgba(34, 139, 34, 0.6) 70%); /* Verde suave a oscuro con opacidad */
+
+  /* Borde verde oscuro con box-shadow */
+  box-shadow: 0 0 10px 3px rgba(34, 139, 34, 0.8), 
+              inset 0 0 5px rgba(34, 139, 34, 0.5); 
+
+  z-index: 1;
+  opacity: 0;
+  transform: scale(0.2); 
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* ⭐ Cuando el enemigo está enredado, el círculo se hace visible */
+.enemy.entangled::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Nuevo estilo para el daño por tiempo de Natureball */
+.damage-text.dot-nature {
+    color: #3CB371; /* Un verde vibrante para el daño por tiempo de naturaleza */
+    font-size: 1.1em; /* Un poco más grande para distinguirlo */
+}

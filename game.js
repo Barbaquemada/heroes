@@ -287,14 +287,15 @@ function spawnEnemy() {
         gameContainer.appendChild(enemy);
 
         enemies.push({ 
-            element: enemy, 
-            position: { x: ex, y: ey }, 
-            hp: finalHp, 
-            isFrozen: false, 
-            isConverted: false, 
-            isAfflicted: false,
-            gigantismFactor: gigantismFactor,
-            isGiant: isGiant
+    element: enemy, 
+    position: { x: ex, y: ey }, 
+    hp: finalHp, 
+    isFrozen: false, 
+    isConverted: false, 
+    isAfflicted: false,
+    isEntangled: false,
+    gigantismFactor: gigantismFactor,
+    isGiant: isGiant
         });
     }
 }
@@ -304,7 +305,7 @@ function moveEnemies() {
     if (paused) return;
     const settings = getMonsterSettings(currentMonsterLevel);
     enemies.forEach(enemy => {
-        if (enemy.isFrozen) return;
+        if (enemy.isFrozen || enemy.isEntangled) return;
 
         let enemyPosition = enemy.position;
         let target = playerPosition;
@@ -440,6 +441,14 @@ function getPlayerSettings(level) {
     const baseSlowAmount = 0.6;
     const baseSlowDuration = 4000;
 
+    // ⭐ Nuevos valores para Natureball
+    const baseNatureballDamage = 15;
+    const baseNatureballSpeed = 7;
+    const baseNatureballRange = 600;
+    const baseEntangleDuration = 1000;
+    const baseEntangleChance = 0.5;
+    const baseNatureDotDamage = 5;
+
     const speed = baseSpeed;
     const maxHp = Math.round(baseHp + (level - 1) * 20);
     const fireballDamage = Math.round(baseFireballDamage + (level - 1) * 50);
@@ -467,12 +476,20 @@ function getPlayerSettings(level) {
     const slowAmount = Math.min(0.9, baseSlowAmount + (level - 1) * 0.02);
     const slowDuration = baseSlowDuration + (level - 1) * 200;
 
+    const natureballDamage = Math.round(baseNatureballDamage + (level - 1) * 10);
+    const natureballSpeed = baseNatureballSpeed + (level - 1) * 0.02;
+    const natureballRange = baseNatureballRange + (level - 1) * 40;
+    const natureDotDamage = Math.round(baseNatureDotDamage + (level - 1) * 2);
+    const entangleDuration = baseEntangleDuration + (level - 1) * 150;
+    const entangleChance = Math.min(0.9, baseEntangleChance + (level - 1) * 0.02);
+
     return { 
         speed, maxHp, 
         fireballDamage, fireballSpeed, fireballRange, fireRate, 
         frostballDamage, frostballSpeed, frostballRange, freezeDuration, 
         lightballDamage, lightballSpeed, lightballRange, conversionChance, conversionDuration,
-        shadowballDamage, shadowballSpeed, shadowballRange, dotDamage, dotDuration, slowAmount, slowDuration
+        shadowballDamage, shadowballSpeed, shadowballRange, dotDamage, dotDuration, slowAmount, slowDuration,
+        natureballDamage, natureballSpeed, natureballRange, entangleDuration, entangleChance, natureDotDamage
     };
 }
 
@@ -514,8 +531,10 @@ spellSelector.addEventListener('click', () => {
     } else if (currentSpell === 'lightball') {
         currentSpell = 'shadowball';
         spellSelector.innerText = "Spell: 🔮";
-    }
-    else {
+    } else if (currentSpell === 'shadowball') {
+        currentSpell = 'natureball';
+        spellSelector.innerText = "Spell: 🌿";
+    } else {
         currentSpell = 'fireball';
         spellSelector.innerText = "Spell: 🔥";
     }
@@ -564,9 +583,21 @@ function autoFire() {
                     }
                 }
             }
-        } else { // 'shadowball'
+        } else if (currentSpell === 'shadowball') {
             for (let enemy of enemies) {
                 if (!enemy.isAfflicted) {
+                    let dx = enemy.position.x - playerPosition.x;
+                    let dy = enemy.position.y - playerPosition.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        targetEnemy = enemy;
+                    }
+                }
+            }
+        } else { // 'natureball'
+            for (let enemy of enemies) {
+                if (!enemy.isEntangled) {
                     let dx = enemy.position.x - playerPosition.x;
                     let dy = enemy.position.y - playerPosition.y;
                     let dist = Math.sqrt(dx * dx + dy * dy);
@@ -580,7 +611,8 @@ function autoFire() {
 
         const spellRange = currentSpell === 'fireball' ? settings.fireballRange : 
                            (currentSpell === 'frostball' ? settings.frostballRange : 
-                           (currentSpell === 'lightball' ? settings.lightballRange : settings.shadowballRange));
+                           (currentSpell === 'lightball' ? settings.lightballRange : 
+                           (currentSpell === 'shadowball' ? settings.shadowballRange : settings.natureballRange)));
 
         if (targetEnemy && minDist < spellRange) {
             const enemyX_screen = (targetEnemy.position.x * zoomLevel) + cameraX;
@@ -609,8 +641,10 @@ function castSpell(event) {
         spellDiv.classList.add('frostball');
     } else if (spellType === 'lightball') {
         spellDiv.classList.add('lightball');
-    } else { // shadowball
+    } else if (spellType === 'shadowball') {
         spellDiv.classList.add('shadowball');
+    } else { // natureball
+        spellDiv.classList.add('natureball');
     }
     
     spellDiv.style.left = `${playerPosition.x + player.offsetWidth / 2 - 10}px`;
@@ -625,15 +659,18 @@ function castSpell(event) {
     const dy = mouseY_world - (playerPosition.y + player.offsetHeight / 2);
     const angle = Math.atan2(dy, dx);
 
-    const speed = spellType === 'fireball' ? settings.fireballSpeed : 
-                  (spellType === 'frostball' ? settings.frostballSpeed : 
-                  (spellType === 'lightball' ? settings.lightballSpeed : settings.shadowballSpeed));
-    const damage = spellType === 'fireball' ? settings.fireballDamage : 
-                   (spellType === 'frostball' ? settings.frostballDamage : 
-                   (spellType === 'lightball' ? settings.lightballDamage : settings.shadowballDamage));
-    const range = spellType === 'fireball' ? settings.fireballRange : 
-                  (spellType === 'frostball' ? settings.frostballRange : 
-                  (spellType === 'lightball' ? settings.lightballRange : settings.shadowballRange));
+    const speed = spellType === 'fireball' ? settings.fireballSpeed :
+                  (spellType === 'frostball' ? settings.frostballSpeed :
+                  (spellType === 'lightball' ? settings.lightballSpeed :
+                  (spellType === 'shadowball' ? settings.shadowballSpeed : settings.natureballSpeed)));
+    const damage = spellType === 'fireball' ? settings.fireballDamage :
+                   (spellType === 'frostball' ? settings.frostballDamage :
+                   (spellType === 'lightball' ? settings.lightballDamage :
+                   (spellType === 'shadowball' ? settings.shadowballDamage : settings.natureballDamage)));
+    const range = spellType === 'fireball' ? settings.fireballRange :
+                  (spellType === 'frostball' ? settings.frostballRange :
+                  (spellType === 'lightball' ? settings.lightballRange :
+                  (spellType === 'shadowball' ? settings.shadowballRange : settings.natureballRange)));
     let traveled = 0;
 
     const spellInterval = setInterval(() => {
@@ -677,13 +714,15 @@ function explode(spellDiv, enemy, damage, spellType) {
     const explosion = document.createElement("div");
     explosion.classList.add("explosion");
     
-    if (spellType === 'frostball') {
-        explosion.classList.add('frost');
-    } else if (spellType === 'lightball') {
-        explosion.classList.add('light');
-    } else if (spellType === 'shadowball') {
-        explosion.classList.add('shadow');
-    }
+if (spellType === 'frostball') {
+    explosion.classList.add('frost');
+} else if (spellType === 'lightball') {
+    explosion.classList.add('light');
+} else if (spellType === 'shadowball') {
+    explosion.classList.add('shadow');
+} else if (spellType === 'natureball') {
+    explosion.classList.add('nature');
+}
 
     explosion.style.left = spellDiv.style.left;
     explosion.style.top = spellDiv.style.top;
@@ -706,6 +745,12 @@ function explode(spellDiv, enemy, damage, spellType) {
     else if (spellType === 'shadowball' && !enemy.isAfflicted) {
         const settings = getPlayerSettings(currentPlayerLevel);
         afflictEnemy(enemy, settings.dotDamage, settings.dotDuration, settings.slowDuration);
+    
+} else if (spellType === 'natureball' && !enemy.isEntangled) {
+        const settings = getPlayerSettings(currentPlayerLevel);
+        if (Math.random() < settings.entangleChance) {
+            entangleEnemy(enemy, settings.entangleDuration);
+        }
     }
 
     if (enemy.hp <= 0) {
@@ -747,7 +792,6 @@ function convertEnemy(enemy, duration) {
     }, duration);
 }
 
-// ⭐ NUEVA FUNCIÓN: Aflige al enemigo con daño por tiempo y ralentización
 // ⭐ NUEVA FUNCIÓN: Aflige al enemigo con daño por tiempo y ralentización
 function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
     enemy.isAfflicted = true;
@@ -811,21 +855,102 @@ function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
     }, slowDuration);
 }
 
+// ⭐ NUEVA FUNCIÓN: Enreda al enemigo por un tiempo
+function entangleEnemy(enemy, duration) {
+    enemy.isEntangled = true;
+    enemy.element.classList.add('entangled');
+
+    // Limpia otros efectos si aplica (ej. si está congelado o convertido)
+    if (enemy.isFrozen) {
+        enemy.isFrozen = false;
+        enemy.element.classList.remove('frozen');
+    }
+    if (enemy.isConverted) {
+        enemy.isConverted = false;
+        enemy.element.classList.remove('converted');
+    }
+
+    // ⭐ Lógica de contagio de enredado - ¡MOVEMOS ESTO!
+    // const contagionChance = 0.5;
+    // const contagionRadius = 50;
+    // for (const otherEnemy of enemies) {
+    //     if (otherEnemy !== enemy && !otherEnemy.isEntangled && otherEnemy.hp > 0) {
+    //         const dx = enemy.position.x - otherEnemy.position.x;
+    //         const dy = enemy.position.y - otherEnemy.position.y;
+    //         const dist = Math.sqrt(dx * dx + dy * dy);
+
+    //         if (dist < contagionRadius && Math.random() < contagionChance) {
+    //             entangleEnemy(otherEnemy, duration);
+    //         }
+    //     }
+    // }
+
+    // Agrega la lógica de daño por tiempo aquí
+    const settings = getPlayerSettings(currentPlayerLevel);
+    const dotDamage = settings.natureDotDamage;
+    const tickInterval = 500; 
+    let ticks = duration / tickInterval;
+
+    const dotInterval = setInterval(() => {
+        if (paused || enemy.hp <= 0) {
+            clearInterval(dotInterval);
+            return;
+        }
+
+        enemy.hp -= dotDamage;
+        // Llama a showDamage con el nuevo parámetro
+        showDamage(enemy, dotDamage, false, false, true); 
+        
+        // ⭐ NUEVA LÓGICA: Contagio de enredado movido aquí
+        const contagionChance = 0.6;
+        const contagionRadius = 80;
+        for (const otherEnemy of enemies) {
+            if (otherEnemy !== enemy && !otherEnemy.isEntangled && otherEnemy.hp > 0) {
+                const dx = enemy.position.x - otherEnemy.position.x;
+                const dy = enemy.position.y - otherEnemy.position.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < contagionRadius && Math.random() < contagionChance) {
+                    entangleEnemy(otherEnemy, duration);
+                }
+            }
+        }
+
+        if (enemy.hp <= 0) {
+            enemy.element.remove();
+            enemies = enemies.filter(e => e !== enemy);
+            killCount++;
+            updateHUD();
+            clearInterval(dotInterval);
+        }
+        ticks--;
+        if (ticks <= 0) {
+            clearInterval(dotInterval);
+        }
+    }, tickInterval);
+
+    setTimeout(() => {
+        enemy.isEntangled = false;
+        enemy.element.classList.remove('entangled');
+    }, duration);
+}
+
 // --- Numeritos flotantes ---
-function showDamage(enemy, amount, isConvertedDamage = false, isDotDamage = false) {
+function showDamage(enemy, amount, isConvertedDamage = false, isDotDamage = false, isNatureDot = false) {
     if (paused) return;
 
     const dmg = document.createElement("div");
     dmg.classList.add("damage-text");
-    dmg.innerText = `-${amount}`;
+    dmg.innerText = `-${Math.round(amount)}`;
     if (isConvertedDamage) {
         dmg.classList.add('converted');
     } else if (isDotDamage) {
-        dmg.classList.add('dot');
+        dmg.classList.add('dot'); // Esta clase es para el Shadowball
+    } else if (isNatureDot) {
+        dmg.classList.add('dot-nature'); // ¡Esta es la nueva clase para el Natureball!
     }
     gameContainer.appendChild(dmg);
 
-    // ⭐ CORRECCIÓN: POSICIONA CON LEFT Y TOP, NO CON TRANSFORM, y considera el gigantismo
     const enemySize = 50 * enemy.gigantismFactor;
     dmg.style.left = `${enemy.position.x + (enemySize / 2) - 10}px`;
     dmg.style.top = `${enemy.position.y - 10}px`;
@@ -974,7 +1099,9 @@ const characters = [
     { name: 'Mage', src: 'char_mage.svg' },
     { name: 'Sorceress', src: 'char_sorceress.svg' },
     { name: 'Cleric', src: 'char_cleric.svg' },
-    { name: 'Witch', src: 'char_witch.svg' }
+    { name: 'Witch', src: 'char_witch.svg' },
+    { name: 'Ranger', src: 'char_ranger.svg' },
+    { name: 'Forestlord', src: 'char_forestlord.svg' }
 ];
 
 let characterIndex = 0;
