@@ -495,15 +495,15 @@ function getPlayerSettings(level) {
     const baseNatureballDamage = 15;
     const baseNatureballSpeed = 7;
     const baseNatureballRange = 600;
-    const baseEntangleDuration = 1000;
-    const baseEntangleChance = 0.5;
+    const baseEntangleDuration = 3000;
+    const baseEntangleChance = 0.8;
     const baseNatureDotDamage = 5;
 
-const baseWindshotSpeed = 15;
-const baseWindshotRange = 800;
+const baseWindshotSpeed = 12;
+const baseWindshotRange = 750;
 const baseWindshotDamage = 10; // Daño por cada impacto
 const baseWindshotChains = 3; // Número de cadenas (ramificaciones)
-const baseWindshotChainRange = 300; // Rango para encontrar al siguiente objetivo
+const baseWindshotChainRange = 200; // Rango para encontrar al siguiente objetivo
 
 
     const speed = baseSpeed;
