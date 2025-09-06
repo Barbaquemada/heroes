@@ -507,7 +507,7 @@ function getPlayerSettings(level) {
 
     // ⭐ Nuevos valores para Natureball
     const baseNatureballDamage = 15;
-    const baseNatureballSpeed = 7;
+    const baseNatureballSpeed = 10;
     const baseNatureballRange = 600;
     const baseEntangleDuration = 3000;
     const baseEntangleChance = 0.8;
@@ -1368,4 +1368,5 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('contextmenu', (event) => {
     event.preventDefault(); // Evita que se muestre el menú contextual del navegador
     changeCharacterAndSpell();
+
 });
