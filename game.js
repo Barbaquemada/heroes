@@ -41,6 +41,7 @@ const treasureHUD = document.getElementById('treasureHUD');
 const fpsDisplay = document.getElementById('fpsDisplay');
 let lastTime = 0;
 let frameCount = 0;
+let currentFPS = 0;
 
 // --- Overlay de PAUSA ---
 let pauseOverlay = document.createElement("div");
@@ -318,9 +319,14 @@ function getGigantismFactor() {
     }
 }
 
-// ⭐ FUNCIÓN CORREGIDA: Ahora los monstruos se posicionan correctamente
+// ⭐ FUNCIÓN `spawnEnemy` MODIFICADA
 function spawnEnemy() {
     if (paused) return;
+
+    // NO generar enemigos si los FPS están por debajo de 50 para evitar la sobrecarga
+    if (currentFPS > 0 && currentFPS < 50) {
+        return;
+    }
 
     const settings = getMonsterSettings(currentMonsterLevel);
 
@@ -341,13 +347,13 @@ function spawnEnemy() {
         enemy.style.backgroundSize = 'cover';
         enemy.style.position = 'absolute';
         
-        // ⭐ Corregido: Usamos left y top para el posicionamiento
+        // Corregido: Usamos left y top para el posicionamiento
         enemy.style.left = `${ex}px`;
         enemy.style.top = `${ey}px`;
 
         if (isGiant) {
             enemy.classList.add('giant');
-            // ⭐ Corregido: Solo aplicamos el scale en el transform
+            // Corregido: Solo aplicamos el scale en el transform
             enemy.style.transform = `scale(${gigantismFactor})`; 
         }
 
@@ -355,15 +361,15 @@ function spawnEnemy() {
         gameContainer.appendChild(enemy);
 
         enemies.push({ 
-    element: enemy, 
-    position: { x: ex, y: ey }, 
-    hp: finalHp, 
-    isFrozen: false, 
-    isConverted: false, 
-    isAfflicted: false,
-    isEntangled: false,
-    gigantismFactor: gigantismFactor,
-    isGiant: isGiant
+            element: enemy, 
+            position: { x: ex, y: ey }, 
+            hp: finalHp, 
+            isFrozen: false, 
+            isConverted: false, 
+            isAfflicted: false,
+            isEntangled: false,
+            gigantismFactor: gigantismFactor,
+            isGiant: isGiant
         });
     }
 }
@@ -1372,13 +1378,14 @@ function gameLoop(time) {
         despawnLoot();
         updateCamera();
 
-        // ⭐ Cálculo de los FPS
+        // Cálculo de los FPS y actualización de la variable global
         if (time !== undefined) {
             frameCount++;
             const deltaTime = time - lastTime;
             if (deltaTime >= 1000) { // Actualiza cada segundo
                 const fps = Math.round(frameCount * 1000 / deltaTime);
                 fpsDisplay.innerText = `FPS: ${fps}`;
+                currentFPS = fps; // <-- Actualiza la variable global aquí
                 frameCount = 0;
                 lastTime = time;
             }
