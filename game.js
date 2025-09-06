@@ -1394,5 +1394,4 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('contextmenu', (event) => {
     event.preventDefault(); // Evita que se muestre el menú contextual del navegador
     changeCharacterAndSpell();
-
 });

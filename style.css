@@ -410,42 +410,26 @@ body, html {
             user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
 }
 
-/* ⭐ Nuevo: Estilo para los objetos de botín */
+/* ⭐ ESTILO PARA EL CONTENEDOR DE BOTÍN ⭐ */
 .dropped-loot {
     position: absolute;
-    width: 30px; /* Tamaño base del icono de botín */
+    width: 30px;
     height: 30px;
     transform: translate(-50%, -50%);
-    /* Eliminamos la animación fireGlow de aquí */
-    animation: lootPulse 1.5s infinite; /* Mantenemos la pulsación de tamaño si la quieres */
+    /* Mantenemos la animación de pulsación */
+    animation: lootPulse 1.5s infinite;
 }
 
+/* ⭐ ESTILO PARA LA IMAGEN DE BOTÍN (CON BRILLO FIJO) ⭐ */
 .dropped-loot img {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* Asegura que el SVG se ajuste bien */
-    
-    /* ⭐ NUEVO: Aplicamos el filtro de sombra directamente a la imagen SVG */
-    /* Usamos filter en lugar de box-shadow en el contenedor */
-    filter: drop-shadow(0 0 5px orange); /* Sombra inicial, se animará */
-    animation: spriteFireGlow 2s infinite alternate ease-in-out; /* Nueva animación para el filtro */
+    object-fit: contain;
+    /* ⭐ El brillo ahora es un estilo estático, no una animación ⭐ */
+    filter: drop-shadow(0 0 10px rgba(255, 140, 0, 0.8));
 }
 
-/* ⭐ NUEVO: Animación para el aura de fuego que sigue la forma del sprite */
-@keyframes spriteFireGlow {
-    0% {
-        filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.8)); /* Una sola sombra */
-    }
-    50% {
-        filter: drop-shadow(0 0 12px rgba(255, 223, 0, 1)); /* Brillo más fuerte */
-    }
-    100% {
-        filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.8));
-    }
-}
-
-
-/* Mantén la animación lootPulse si quieres la pulsación de tamaño */
+/* ⭐ Mantenemos solo la animación de pulsación ⭐ */
 @keyframes lootPulse {
     0% { transform: scale(1) translate(-50%, -50%); }
     50% { transform: scale(1.2) translate(-50%, -50%); }
