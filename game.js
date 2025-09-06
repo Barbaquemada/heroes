@@ -24,6 +24,19 @@ const spellSelector = document.getElementById('spellSelector');
 const playerSprite = document.querySelector('#player img');
 let isMago = true;
 
+// ⭐ Variables para el sistema de loot y contador
+let droppedLoot = [];
+const lootPickupDistance = 80; // Distancia en píxeles para recoger el botín
+let treasureCounts = {
+    common: 0,
+    uncommon: 0,
+    rare: 0,
+    epic: 0,
+    legendary: 0,
+    mythic: 0
+};
+const treasureHUD = document.getElementById('treasureHUD');
+
 // --- Overlay de PAUSA ---
 let pauseOverlay = document.createElement("div");
 pauseOverlay.innerText = "⏸ PAUSE";
@@ -445,6 +458,7 @@ function moveEnemies() {
                         enemies = enemies.filter(e => e !== targetEnemy);
             killCount++;
             updateHUD();
+dropLoot(enemy.position.x, enemy.position.y); // ⭐ Añadido: Suelta el botín al morir
                     }
                 } else {
                     // ⭐ NUEVO BLOQUE: Escalado de daño del monstruo más suave
@@ -877,6 +891,7 @@ function explode(spellDiv, enemy, damage, spellType) {
         enemies = enemies.filter(e => e !== enemy);
         killCount++;
         updateHUD();
+dropLoot(enemy.position.x, enemy.position.y); // ⭐ Añadido: Suelta el botín al morir
     }
     spellDiv.remove();
 }
@@ -959,6 +974,7 @@ function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
             enemies = enemies.filter(e => e !== enemy);
             killCount++;
             updateHUD();
+dropLoot(enemy.position.x, enemy.position.y); // ⭐ Añadido: Suelta el botín al morir
             clearInterval(dotInterval);
         }
         ticks--;
@@ -1040,6 +1056,7 @@ function entangleEnemy(enemy, duration) {
             enemies = enemies.filter(e => e !== enemy);
             killCount++;
             updateHUD();
+dropLoot(enemy.position.x, enemy.position.y); // ⭐ Añadido: Suelta el botín al morir
             clearInterval(dotInterval);
         }
         ticks--;
@@ -1097,6 +1114,113 @@ function takeDamage(amount) {
 function updateHUD() {
     hudLeft.innerText = `❤️ ${playerHP} / ${maxPlayerHP}`;
     hudRight.innerText = `Monsters Slain: ${killCount}`;
+}
+
+// ⭐ Lógica de la caída de botín
+const lootChances = [
+    { type: 'mythic', chance: 0.0005, image: 'treasure_mythic.svg' },
+    { type: 'legendary', chance: 0.005, image: 'treasure_legendary.svg' },
+    { type: 'epic', chance: 0.05, image: 'treasure_epic.svg' },
+    { type: 'rare', chance: 0.5, image: 'treasure_rare.svg' },
+    { type: 'uncommon', chance: 5, image: 'treasure_uncommon.svg' },
+    { type: 'common', chance: 50, image: 'treasure_common.svg' }
+];
+
+function dropLoot(x, y, gigantismFactor) { 
+    const randomValue = Math.random() * 100;
+    let lootDropped = false;
+
+    // ⭐ Hacemos el código robusto: usamos 1 si no se define el gigantismFactor
+    const effectiveGigantismFactor = gigantismFactor || 1;
+
+    for (let loot of lootChances) {
+        const adjustedChance = loot.chance * effectiveGigantismFactor; 
+        if (randomValue <= adjustedChance) {
+            let lootDiv = document.createElement('div');
+            lootDiv.classList.add('dropped-loot');
+            lootDiv.style.left = `${x}px`;
+            lootDiv.style.top = `${y}px`;
+            
+            let lootImg = document.createElement('img');
+            lootImg.src = loot.image;
+            lootDiv.appendChild(lootImg);
+
+            gameContainer.appendChild(lootDiv);
+            
+            droppedLoot.push({
+                element: lootDiv,
+                position: { x: x, y: y },
+                type: loot.type,
+spawnTime: Date.now()
+            });
+            lootDropped = true;
+            break; // Salimos del bucle para no soltar varios objetos
+        }
+    }
+}
+
+// ⭐ Lógica de recolección de botín
+function checkLootPickup() {
+    if (paused) return;
+
+    // Filtra el botín que ha sido recogido
+    droppedLoot = droppedLoot.filter(loot => {
+        const dx = (playerPosition.x + player.offsetWidth / 2) - loot.position.x;
+        const dy = (playerPosition.y + player.offsetHeight / 2) - loot.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < lootPickupDistance) {
+            // Lógica para recoger el botín
+            loot.element.remove();
+            treasureCounts[loot.type]++;
+            updateTreasureHUD();
+            return false; // Retorna falso para que el elemento sea eliminado del array
+        }
+        return true; // Retorna verdadero para mantener el elemento en el array
+    });
+}
+
+// ⭐ NUEVA VARIABLE: Tiempos de desaparición por tipo de botín
+const lootDespawnTimes = {
+    common: 10000,     // 10 segundos
+    uncommon: 60000,   // 1 minuto
+    rare: 90000,       // 1.5 minutos
+    epic: 300000,      // 5 minutos
+    legendary: 600000, // 10 minutos
+    mythic: 900000     // 15 minutos
+};
+
+// ⭐ NUEVA FUNCIÓN: Elimina el botín según su rareza
+function despawnLoot() {
+    if (paused) return;
+
+    const currentTime = Date.now();
+
+    // Filtra el array de botín para eliminar los elementos caducados
+    droppedLoot = droppedLoot.filter(loot => {
+        // Obtiene el tiempo de desaparición específico para este tipo de botín
+        const specificDespawnTime = lootDespawnTimes[loot.type] || 60000; // Valor por defecto de 1 minuto
+
+        if (currentTime - loot.spawnTime > specificDespawnTime) {
+            loot.element.remove();
+            return false;
+        }
+        return true;
+    });
+}
+
+// ⭐ Actualiza el contador de tesoros en la pantalla
+function updateTreasureHUD() {
+    // Obtenemos todos los contadores de loot
+    const counters = treasureHUD.querySelectorAll('.loot-counter span');
+
+    // Actualizamos el texto de cada contador con la cantidad de cada tesoro
+    counters[0].innerText = treasureCounts.common;
+    counters[1].innerText = treasureCounts.uncommon;
+    counters[2].innerText = treasureCounts.rare;
+    counters[3].innerText = treasureCounts.epic;
+    counters[4].innerText = treasureCounts.legendary;
+    counters[5].innerText = treasureCounts.mythic;
 }
 
 // --- Joystick móvil dinámico ---
@@ -1222,6 +1346,8 @@ function gameLoop() {
         movePlayer();
         spawnEnemy();
         moveEnemies();
+checkLootPickup();
+despawnLoot();
         updateCamera();
     }
     requestAnimationFrame(gameLoop);

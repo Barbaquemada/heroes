@@ -409,3 +409,70 @@ body, html {
         -ms-user-select: none; /* Internet Explorer/Edge */
             user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
 }
+
+/* ⭐ Nuevo: Estilo para los objetos de botín */
+.dropped-loot {
+    position: absolute;
+    width: 30px; /* Tamaño base del icono de botín */
+    height: 30px;
+    transform: translate(-50%, -50%);
+    /* Eliminamos la animación fireGlow de aquí */
+    animation: lootPulse 1.5s infinite; /* Mantenemos la pulsación de tamaño si la quieres */
+}
+
+.dropped-loot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Asegura que el SVG se ajuste bien */
+    
+    /* ⭐ NUEVO: Aplicamos el filtro de sombra directamente a la imagen SVG */
+    /* Usamos filter en lugar de box-shadow en el contenedor */
+    filter: drop-shadow(0 0 5px orange); /* Sombra inicial, se animará */
+    animation: spriteFireGlow 2s infinite alternate ease-in-out; /* Nueva animación para el filtro */
+}
+
+/* ⭐ NUEVO: Animación para el aura de fuego que sigue la forma del sprite */
+@keyframes spriteFireGlow {
+    0% {
+        filter: drop-shadow(0 0 4px rgba(255, 165, 0, 0.8)) /* Naranja */
+                drop-shadow(0 0 8px rgba(255, 69, 0, 0.6)); /* Rojo-naranja */
+    }
+    50% {
+        filter: drop-shadow(0 0 6px rgba(255, 223, 0, 1)) /* Amarillo brillante */
+                drop-shadow(0 0 12px rgba(255, 140, 0, 0.8)); /* Naranja oscuro */
+    }
+    100% {
+        filter: drop-shadow(0 0 4px rgba(255, 165, 0, 0.8)) /* Volvemos al estado inicial */
+                drop-shadow(0 0 8px rgba(255, 69, 0, 0.6));
+    }
+}
+
+
+/* Mantén la animación lootPulse si quieres la pulsación de tamaño */
+@keyframes lootPulse {
+    0% { transform: scale(1) translate(-50%, -50%); }
+    50% { transform: scale(1.2) translate(-50%, -50%); }
+    100% { transform: scale(1) translate(-50%, -50%); }
+}
+
+/* ⭐ Nuevo estilo para el HUD más pequeño (loot) */
+.hud-box.small-hud {
+    font-size: 14px;
+    min-width: 20px;
+    padding: 5px 10px;
+}
+
+/* ⭐ NUEVO: Estilos para el contador de tesoros con iconos */
+.loot-counter {
+    display: flex;
+    align-items: center;
+    margin: 0 2px;
+    font-weight: bold;
+}
+
+.loot-counter img {
+    width: 1em; /* O 16px, 18px, lo que mejor se ajuste a tu diseño */
+    height: 1em;
+    margin-right: 1px;
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); 
+}
