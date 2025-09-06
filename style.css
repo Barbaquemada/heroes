@@ -479,17 +479,11 @@ body, html {
 
 /* ⭐ Optimizaciones de rendimiento para móviles */
 @media (max-width: 768px) {
-  
-  /* Desactiva los filtros costosos y animaciones en los enemigos */
-  .enemy {
-    filter: none;
-    animation: none !important;
-  }
 
   /* Desactiva la animación de parpadeo y brillo del loot */
-  .loot-item {
-    animation: none;
-    filter: none;
+  .dropped-loot,
+  .dropped-loot img {
+    animation: none !important;
+    filter: none !important;
   }
-
 }
