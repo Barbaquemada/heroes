@@ -323,8 +323,8 @@ function getGigantismFactor() {
 function spawnEnemy() {
     if (paused) return;
 
-    // NO generar enemigos si los FPS están por debajo de 50 para evitar la sobrecarga
-    if (currentFPS > 0 && currentFPS < 50) {
+    // NO generar enemigos si los FPS están por debajo de 25 para evitar la sobrecarga
+    if (currentFPS > 0 && currentFPS < 25) {
         return;
     }
 
@@ -1409,4 +1409,5 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('contextmenu', (event) => {
     event.preventDefault(); // Evita que se muestre el menú contextual del navegador
     changeCharacterAndSpell();
+
 });
