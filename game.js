@@ -264,7 +264,7 @@ function getMonsterRadius(enemy) {
 
 function getMonsterSettings(level) {
     const baseSpeed = 2;
-    const baseHp = 50;
+    const baseHp = 40;
     const baseSpawnChance = 0.80;
     const baseDistanceThreshold = 600;
     const baseMaxEnemies = 100;
