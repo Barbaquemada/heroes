@@ -982,7 +982,7 @@ function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
         showDamage(enemy, dotDamage, false, true);
 
         // ⭐ Lógica de contagio movida aquí para que se ejecute en cada tick
-        const contagionChance = 0.2; // 20% de probabilidad de contagio
+        const contagionChance = 0.8; // 20% de probabilidad de contagio
         const contagionRadius = 50; // Radio en píxeles para el contagio
 
         for (const otherEnemy of enemies) {
@@ -1033,21 +1033,6 @@ function entangleEnemy(enemy, duration) {
         enemy.element.classList.remove('converted');
     }
 
-    // ⭐ Lógica de contagio de enredado - ¡MOVEMOS ESTO!
-    // const contagionChance = 0.2;
-    // const contagionRadius = 50;
-    // for (const otherEnemy of enemies) {
-    //     if (otherEnemy !== enemy && !otherEnemy.isEntangled && otherEnemy.hp > 0) {
-    //         const dx = enemy.position.x - otherEnemy.position.x;
-    //         const dy = enemy.position.y - otherEnemy.position.y;
-    //         const dist = Math.sqrt(dx * dx + dy * dy);
-
-    //         if (dist < contagionRadius && Math.random() < contagionChance) {
-    //             entangleEnemy(otherEnemy, duration);
-    //         }
-    //     }
-    // }
-
     // Agrega la lógica de daño por tiempo aquí
     const settings = getPlayerSettings(currentPlayerLevel);
     const dotDamage = settings.natureDotDamage;
@@ -1064,9 +1049,9 @@ function entangleEnemy(enemy, duration) {
         // Llama a showDamage con el nuevo parámetro
         showDamage(enemy, dotDamage, false, false, true); 
         
-        // ⭐ NUEVA LÓGICA: Contagio de enredado movido aquí
-        const contagionChance = 0.3;
-        const contagionRadius = 40;
+        // ⭐ NUEVA LÓGICA: Contagio de enredado
+        const contagionChance = 0.8;
+        const contagionRadius = 50;
         for (const otherEnemy of enemies) {
             if (otherEnemy !== enemy && !otherEnemy.isEntangled && otherEnemy.hp > 0) {
                 const dx = enemy.position.x - otherEnemy.position.x;
