@@ -982,8 +982,8 @@ function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
         showDamage(enemy, dotDamage, false, true);
 
         // ⭐ Lógica de contagio movida aquí para que se ejecute en cada tick
-        const contagionChance = 0.8; // 80% de probabilidad de contagio
-        const contagionRadius = 100; // Radio en píxeles para el contagio
+        const contagionChance = 0.2; // 20% de probabilidad de contagio
+        const contagionRadius = 50; // Radio en píxeles para el contagio
 
         for (const otherEnemy of enemies) {
             if (otherEnemy !== enemy && !otherEnemy.isAfflicted && otherEnemy.hp > 0) {
@@ -1034,7 +1034,7 @@ function entangleEnemy(enemy, duration) {
     }
 
     // ⭐ Lógica de contagio de enredado - ¡MOVEMOS ESTO!
-    // const contagionChance = 0.5;
+    // const contagionChance = 0.2;
     // const contagionRadius = 50;
     // for (const otherEnemy of enemies) {
     //     if (otherEnemy !== enemy && !otherEnemy.isEntangled && otherEnemy.hp > 0) {
