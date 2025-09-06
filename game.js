@@ -320,6 +320,7 @@ function getGigantismFactor() {
 }
 
 // ⭐ FUNCIÓN `spawnEnemy` MODIFICADA
+// ⭐ FUNCIÓN `spawnEnemy` MODIFICADA para usar 'transform'
 function spawnEnemy() {
     if (paused) return;
 
@@ -347,14 +348,10 @@ function spawnEnemy() {
         enemy.style.backgroundSize = 'cover';
         enemy.style.position = 'absolute';
         
-        // Corregido: Usamos left y top para el posicionamiento
-        enemy.style.left = `${ex}px`;
-        enemy.style.top = `${ey}px`;
-
+        // ⭐ Corregido: Ahora usamos 'transform' para el posicionamiento inicial y el escalado
+        enemy.style.transform = `translate(${ex}px, ${ey}px) scale(${gigantismFactor})`;
         if (isGiant) {
             enemy.classList.add('giant');
-            // Corregido: Solo aplicamos el scale en el transform
-            enemy.style.transform = `scale(${gigantismFactor})`; 
         }
 
         const finalHp = settings.hp * Math.pow(gigantismFactor, 2);
@@ -374,7 +371,7 @@ function spawnEnemy() {
     }
 }
 
-// ⭐ FUNCIÓN CORREGIDA: Ahora los monstruos se mueven correctamente
+// ⭐ VERSIÓN OPTIMIZADA: Usa 'transform' para mover a los enemigos
 function moveEnemies() {
     if (paused) return;
     const settings = getMonsterSettings(currentMonsterLevel);
@@ -385,8 +382,7 @@ function moveEnemies() {
         let target = playerPosition;
         let targetEnemy = null;
         let isFightingOtherEnemy = false;
-        
-        // ⭐ Si el enemigo está convertido, busca un enemigo no convertido para atacar
+
         if (enemy.isConverted) {
             let minDist = Infinity;
             for (let otherEnemy of enemies) {
@@ -400,9 +396,8 @@ function moveEnemies() {
                     }
                 }
             }
-        } 
-        
-        // ⭐ Si el enemigo NO está convertido, busca un enemigo convertido para atacar, si está cerca
+        }
+
         else {
             let minDist = Infinity;
             for (let otherEnemy of enemies) {
@@ -410,7 +405,7 @@ function moveEnemies() {
                     let dx = otherEnemy.position.x - enemyPosition.x;
                     let dy = otherEnemy.position.y - enemyPosition.y;
                     let dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 200) { // Distancia para que los enemigos se ataquen entre sí
+                    if (dist < 200) {
                         minDist = dist;
                         targetEnemy = otherEnemy;
                     }
@@ -418,7 +413,6 @@ function moveEnemies() {
             }
         }
 
-        // ⭐ Elige el objetivo final
         if (targetEnemy) {
             target = targetEnemy.position;
             isFightingOtherEnemy = true;
@@ -435,7 +429,6 @@ function moveEnemies() {
             enemy.element.remove();
             enemies = enemies.filter(e => e !== enemy);
         } else {
-            // ⭐ Aplica la ralentización si el enemigo está afligido o es gigante
             let currentEnemySpeed = settings.speed / enemy.gigantismFactor;
             if (enemy.isAfflicted) {
                 const playerSettings = getPlayerSettings(currentPlayerLevel);
@@ -446,33 +439,28 @@ function moveEnemies() {
             enemyPosition.x += Math.cos(angle) * currentEnemySpeed;
             enemyPosition.y += Math.sin(angle) * currentEnemySpeed;
             
-            // ⭐ Limitar al tablero considerando el tamaño escalado del monstruo
             const enemySize = 50 * enemy.gigantismFactor;
             enemyPosition.x = Math.max(0, Math.min(BOARD_WIDTH - enemySize, enemyPosition.x));
             enemyPosition.y = Math.max(0, Math.min(BOARD_HEIGHT - enemySize, enemyPosition.y));
             
-            // ⭐ Corregido: Ahora usamos left y top para el movimiento
-            enemy.element.style.left = `${enemyPosition.x}px`;
-            enemy.element.style.top = `${enemyPosition.y}px`;
+            // ⭐ CÓDIGO OPTIMIZADO: Usa transform para un mejor rendimiento
+            enemy.element.style.transform = `translate(${enemyPosition.x}px, ${enemyPosition.y}px) scale(${enemy.gigantismFactor})`;
             
-            // ⭐ Aplica el daño si el enemigo está cerca de su objetivo (jugador o enemigo)
-            // ⭐ NUEVA LÓGICA DE COLISIÓN DE ATAQUE DEL MONSTRUO
             const monsterRadius = getMonsterRadius(enemy);
             const attackThreshold = monsterRadius * 0.9;
             if (distance < attackThreshold) {
                 if (isFightingOtherEnemy) {
-                    const damage = 10 * enemy.gigantismFactor; // Daño fijo que se hacen los enemigos entre ellos
+                    const damage = 10 * enemy.gigantismFactor;
                     targetEnemy.hp -= damage;
-                    showDamage(targetEnemy, damage, true); // ⭐ Añade 'true' para indicar que el daño es entre enemigos
+                    showDamage(targetEnemy, damage, true);
                     if (targetEnemy.hp <= 0) {
                         targetEnemy.element.remove();
                         enemies = enemies.filter(e => e !== targetEnemy);
-            killCount++;
-            updateHUD();
-dropLoot(enemy.position.x, enemy.position.y); // ⭐ Añadido: Suelta el botín al morir
+                        killCount++;
+                        updateHUD();
+                        dropLoot(enemy.position.x, enemy.position.y);
                     }
                 } else {
-                    // ⭐ NUEVO BLOQUE: Escalado de daño del monstruo más suave
                     const gigantismDamageFactor = 0.5;
                     const finalDamage = 5 + (enemy.gigantismFactor - 1) * gigantismDamageFactor;
                     takeDamage(finalDamage);
