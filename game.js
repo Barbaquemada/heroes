@@ -37,12 +37,6 @@ let treasureCounts = {
 };
 const treasureHUD = document.getElementById('treasureHUD');
 
-// ⭐ NUEVO: Variables para el contador de FPS
-const fpsDisplay = document.getElementById('fpsDisplay');
-let lastTime = 0;
-let frameCount = 0;
-let currentFPS = 0;
-
 // --- Overlay de PAUSA ---
 let pauseOverlay = document.createElement("div");
 pauseOverlay.innerText = "⏸ PAUSE";
@@ -319,14 +313,9 @@ function getGigantismFactor() {
     }
 }
 
-// ⭐ FUNCIÓN `spawnEnemy` MODIFICADA
+// ⭐ FUNCIÓN CORREGIDA: Ahora los monstruos se posicionan correctamente
 function spawnEnemy() {
     if (paused) return;
-
-    // NO generar enemigos si los FPS están por debajo de 40 para evitar la sobrecarga
-    if (currentFPS > 0 && currentFPS < 40) {
-        return;
-    }
 
     const settings = getMonsterSettings(currentMonsterLevel);
 
@@ -347,13 +336,13 @@ function spawnEnemy() {
         enemy.style.backgroundSize = 'cover';
         enemy.style.position = 'absolute';
         
-        // Corregido: Usamos left y top para el posicionamiento
+        // ⭐ Corregido: Usamos left y top para el posicionamiento
         enemy.style.left = `${ex}px`;
         enemy.style.top = `${ey}px`;
 
         if (isGiant) {
             enemy.classList.add('giant');
-            // Corregido: Solo aplicamos el scale en el transform
+            // ⭐ Corregido: Solo aplicamos el scale en el transform
             enemy.style.transform = `scale(${gigantismFactor})`; 
         }
 
@@ -361,15 +350,15 @@ function spawnEnemy() {
         gameContainer.appendChild(enemy);
 
         enemies.push({ 
-            element: enemy, 
-            position: { x: ex, y: ey }, 
-            hp: finalHp, 
-            isFrozen: false, 
-            isConverted: false, 
-            isAfflicted: false,
-            isEntangled: false,
-            gigantismFactor: gigantismFactor,
-            isGiant: isGiant
+    element: enemy, 
+    position: { x: ex, y: ey }, 
+    hp: finalHp, 
+    isFrozen: false, 
+    isConverted: false, 
+    isAfflicted: false,
+    isEntangled: false,
+    gigantismFactor: gigantismFactor,
+    isGiant: isGiant
         });
     }
 }
@@ -511,18 +500,18 @@ function getPlayerSettings(level) {
     const baseShadowballDamage = 5;
     const baseShadowballSpeed = 9;
     const baseShadowballRange = 650;
-    const baseDotDamage = 15;
+    const baseDotDamage = 10;
     const baseDotDuration = 4000;
     const baseSlowAmount = 0.6;
     const baseSlowDuration = 4000;
 
     // ⭐ Nuevos valores para Natureball
-    const baseNatureballDamage = 10;
-    const baseNatureballSpeed = 12;
+    const baseNatureballDamage = 15;
+    const baseNatureballSpeed = 7;
     const baseNatureballRange = 600;
     const baseEntangleDuration = 3000;
     const baseEntangleChance = 0.8;
-    const baseNatureDotDamage = 10;
+    const baseNatureDotDamage = 5;
 
 const baseWindshotSpeed = 12;
 const baseWindshotRange = 750;
@@ -610,7 +599,6 @@ playerLevelDownButton.addEventListener('click', () => {
 updatePlayerLevelDisplay();
 
 // --- Disparo automático para PC y móvil ---
-// ⭐ FUNCIÓN DE AUTO-DISPARO MODIFICADA
 function autoFire() {
     if (paused || gameOver) return;
     const settings = getPlayerSettings(currentPlayerLevel);
@@ -619,34 +607,19 @@ function autoFire() {
     let minDist = Infinity;
     
     if (enemies.length > 0) {
-        let sortedEnemies = [];
+        // ⭐ Busca el enemigo más cercano de forma genérica para todos los hechizos
+        let sortedEnemies = [...enemies].sort((a, b) => {
+            const distA = Math.sqrt(Math.pow(a.position.x - playerPosition.x, 2) + Math.pow(a.position.y - playerPosition.y, 2));
+            const distB = Math.sqrt(Math.pow(b.position.x - playerPosition.x, 2) + Math.pow(b.position.y - playerPosition.y, 2));
+            return distA - distB;
+        });
 
-        // 1. Prioriza a los enemigos que NO tienen ninguna condición de estado
-        const cleanEnemies = enemies.filter(enemy => 
-            !enemy.isFrozen && 
-            !enemy.isConverted && 
-            !enemy.isAfflicted && 
-            !enemy.isEntangled
-        );
-        
-        if (cleanEnemies.length > 0) {
-            // Si hay enemigos "limpios", ordena y selecciona el más cercano
-            sortedEnemies = cleanEnemies.sort((a, b) => {
-                const distA = Math.sqrt(Math.pow(a.position.x - playerPosition.x, 2) + Math.pow(a.position.y - playerPosition.y, 2));
-                const distB = Math.sqrt(Math.pow(b.position.x - playerPosition.x, 2) + Math.pow(b.position.y - playerPosition.y, 2));
-                return distA - distB;
-            });
-        } else {
-            // Si TODOS los enemigos tienen una condición, ataca al más cercano de todos
-            sortedEnemies = enemies.sort((a, b) => {
-                const distA = Math.sqrt(Math.pow(a.position.x - playerPosition.x, 2) + Math.pow(a.position.y - playerPosition.y, 2));
-                const distB = Math.sqrt(Math.pow(b.position.x - playerPosition.x, 2) + Math.pow(b.position.y - playerPosition.y, 2));
-                return distA - distB;
-            });
+        // ⭐ Lógica específica de cada hechizo para seleccionar el objetivo
+        if (currentSpell === 'fireball' || currentSpell === 'frostball' || currentSpell === 'lightball' || currentSpell === 'shadowball' || currentSpell === 'windshot') {
+            targetEnemy = sortedEnemies[0];
+        } else if (currentSpell === 'natureball') {
+            targetEnemy = sortedEnemies.find(enemy => !enemy.isEntangled);
         }
-        
-        // Asigna el primer enemigo de la lista ordenada como objetivo
-        targetEnemy = sortedEnemies[0];
 
         if (targetEnemy) {
             minDist = Math.sqrt(Math.pow(targetEnemy.position.x - playerPosition.x, 2) + Math.pow(targetEnemy.position.y - playerPosition.y, 2));
@@ -656,7 +629,7 @@ function autoFire() {
                            (currentSpell === 'frostball' ? settings.frostballRange : 
                            (currentSpell === 'lightball' ? settings.lightballRange : 
                            (currentSpell === 'shadowball' ? settings.shadowballRange : 
-                           (currentSpell === 'natureball' ? settings.natureballRange : settings.windshotRange)))); 
+                           (currentSpell === 'natureball' ? settings.natureballRange : settings.windshotRange)))); // ⭐ Añade Windshot
 
         if (targetEnemy && minDist < spellRange) {
             const enemyX_screen = (targetEnemy.position.x * zoomLevel) + cameraX;
@@ -668,7 +641,6 @@ function autoFire() {
             });
         }
     }
-    
     autoFireTimer = setTimeout(autoFire, fireRate);
 }
 
@@ -982,8 +954,8 @@ function afflictEnemy(enemy, dotDamage, dotDuration, slowDuration) {
         showDamage(enemy, dotDamage, false, true);
 
         // ⭐ Lógica de contagio movida aquí para que se ejecute en cada tick
-        const contagionChance = 0.8; // 20% de probabilidad de contagio
-        const contagionRadius = 50; // Radio en píxeles para el contagio
+        const contagionChance = 0.8; // 80% de probabilidad de contagio
+        const contagionRadius = 100; // Radio en píxeles para el contagio
 
         for (const otherEnemy of enemies) {
             if (otherEnemy !== enemy && !otherEnemy.isAfflicted && otherEnemy.hp > 0) {
@@ -1033,6 +1005,21 @@ function entangleEnemy(enemy, duration) {
         enemy.element.classList.remove('converted');
     }
 
+    // ⭐ Lógica de contagio de enredado - ¡MOVEMOS ESTO!
+    // const contagionChance = 0.5;
+    // const contagionRadius = 50;
+    // for (const otherEnemy of enemies) {
+    //     if (otherEnemy !== enemy && !otherEnemy.isEntangled && otherEnemy.hp > 0) {
+    //         const dx = enemy.position.x - otherEnemy.position.x;
+    //         const dy = enemy.position.y - otherEnemy.position.y;
+    //         const dist = Math.sqrt(dx * dx + dy * dy);
+
+    //         if (dist < contagionRadius && Math.random() < contagionChance) {
+    //             entangleEnemy(otherEnemy, duration);
+    //         }
+    //     }
+    // }
+
     // Agrega la lógica de daño por tiempo aquí
     const settings = getPlayerSettings(currentPlayerLevel);
     const dotDamage = settings.natureDotDamage;
@@ -1049,9 +1036,9 @@ function entangleEnemy(enemy, duration) {
         // Llama a showDamage con el nuevo parámetro
         showDamage(enemy, dotDamage, false, false, true); 
         
-        // ⭐ NUEVA LÓGICA: Contagio de enredado
-        const contagionChance = 0.8;
-        const contagionRadius = 50;
+        // ⭐ NUEVA LÓGICA: Contagio de enredado movido aquí
+        const contagionChance = 0.6;
+        const contagionRadius = 80;
         for (const otherEnemy of enemies) {
             if (otherEnemy !== enemy && !otherEnemy.isEntangled && otherEnemy.hp > 0) {
                 const dx = enemy.position.x - otherEnemy.position.x;
@@ -1353,28 +1340,15 @@ gameContainer.addEventListener('touchend', (e) => {
 
 
 // --- Bucle principal ---
-function gameLoop(time) {
+function gameLoop() {
     if (!paused && !gameOver) {
         updateMouseWorldPosition();
         movePlayer();
         spawnEnemy();
         moveEnemies();
-        checkLootPickup();
-        despawnLoot();
+checkLootPickup();
+despawnLoot();
         updateCamera();
-
-        // Cálculo de los FPS y actualización de la variable global
-        if (time !== undefined) {
-            frameCount++;
-            const deltaTime = time - lastTime;
-            if (deltaTime >= 1000) { // Actualiza cada segundo
-                const fps = Math.round(frameCount * 1000 / deltaTime);
-                fpsDisplay.innerText = `FPS: ${fps}`;
-                currentFPS = fps; // <-- Actualiza la variable global aquí
-                frameCount = 0;
-                lastTime = time;
-            }
-        }
     }
     requestAnimationFrame(gameLoop);
 }
@@ -1394,5 +1368,4 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('contextmenu', (event) => {
     event.preventDefault(); // Evita que se muestre el menú contextual del navegador
     changeCharacterAndSpell();
-
 });
