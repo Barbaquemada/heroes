@@ -434,16 +434,13 @@ body, html {
 /* ⭐ NUEVO: Animación para el aura de fuego que sigue la forma del sprite */
 @keyframes spriteFireGlow {
     0% {
-        filter: drop-shadow(0 0 4px rgba(255, 165, 0, 0.8)) /* Naranja */
-                drop-shadow(0 0 8px rgba(255, 69, 0, 0.6)); /* Rojo-naranja */
+        filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.8)); /* Una sola sombra */
     }
     50% {
-        filter: drop-shadow(0 0 6px rgba(255, 223, 0, 1)) /* Amarillo brillante */
-                drop-shadow(0 0 12px rgba(255, 140, 0, 0.8)); /* Naranja oscuro */
+        filter: drop-shadow(0 0 12px rgba(255, 223, 0, 1)); /* Brillo más fuerte */
     }
     100% {
-        filter: drop-shadow(0 0 4px rgba(255, 165, 0, 0.8)) /* Volvemos al estado inicial */
-                drop-shadow(0 0 8px rgba(255, 69, 0, 0.6));
+        filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.8));
     }
 }
 
