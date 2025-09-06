@@ -476,14 +476,3 @@ body, html {
     margin-right: 1px;
     filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); 
 }
-
-/* ⭐ Optimizaciones de rendimiento para móviles */
-@media (max-width: 768px) {
-
-  /* Desactiva la animación de parpadeo y brillo del loot */
-  .dropped-loot,
-  .dropped-loot img {
-    animation: none !important;
-    filter: none !important;
-  }
-}
