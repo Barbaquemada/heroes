@@ -502,7 +502,7 @@ function moveEnemies() {
                     }
                 } else {
                     const gigantismDamageFactor = 0.5;
-                    const finalDamage = 5 + (enemy.gigantismFactor - 1) * gigantismDamageFactor;
+                    const finalDamage = (5 + (enemy.gigantismFactor - 1) * gigantismDamageFactor) * gameSpeedMultiplier;
                     takeDamage(finalDamage);
                 }
             }
