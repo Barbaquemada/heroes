@@ -309,7 +309,7 @@ const speedDisplay = document.getElementById('gameSpeedDisplay');
 const speedUpButton = document.getElementById('speedUp');
 const speedDownButton = document.getElementById('speedDown');
 
-const speedSteps = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const speedSteps = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 speedUpButton.addEventListener('click', () => {
     let currentIndex = speedSteps.indexOf(gameSpeedMultiplier);
