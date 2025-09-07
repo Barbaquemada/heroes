@@ -67,12 +67,28 @@ window.addEventListener("keydown", (e) => {
     if (e.code === "Escape") {
         paused = !paused;
         pauseOverlay.style.display = paused ? "block" : "none";
+        // Añade esta línea para cambiar el texto del botón
+        pauseButton.innerText = paused ? "▶️ PLAY" : "⏸ PAUSE";
 
         if (paused) {
             clearTimeout(autoFireTimer);
         } else {
             autoFire();
         }
+    }
+});
+
+const pauseButton = document.getElementById('pauseButton');
+pauseButton.addEventListener('click', () => {
+    paused = !paused;
+    pauseOverlay.style.display = paused ? "block" : "none";
+    // Añade esta línea para cambiar el texto del botón
+    pauseButton.innerText = paused ? "▶️ PLAY" : "⏸ PAUSE";
+
+    if (paused) {
+        clearTimeout(autoFireTimer);
+    } else {
+        autoFire();
     }
 });
 

@@ -209,7 +209,7 @@ body, html {
 }
 
 /* ⭐ Aplicar el mismo estilo a los botones de nivel y al selector de hechizo */
-.level-button, #spellSelector { /* Añadido #spellSelector aquí */
+.level-button, #spellSelector, #pauseButton  { /* Añadido #spellSelector aquí */
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid gold;
