@@ -20,20 +20,26 @@
   <div class="ui-container left-side">
     <div id="hudLeft" class="hud-box">❤️ 100 / 100</div>
     <div class="level-controls">
+        <button id="playerLevelDown" class="level-button">-</button>
         <button id="playerLevelUp" class="level-button">+</button>
         <span id="playerLevelDisplay" class="level-text">pLevel: 1</span>
-        <button id="playerLevelDown" class="level-button">-</button>
     </div>
     <button id="characterSelector">Mage</button>
   <button id="spellSelector">Spell: 🔥</button>
+<div class="level-controls">
+  <button id="speedDown" class="level-button">-</button>
+  <button id="speedUp" class="level-button">+</button>
+  <span id="gameSpeedDisplay" class="level-text">Speed: 1x</span>
+</div>
+    <div id="fpsDisplay" class="hud-box small-hud">FPS: 0</div>
   </div>
 
   <div class="ui-container right-side">
     <div id="hudRight" class="hud-box">Monsters Slain: 0</div>
     <div class="level-controls">
-        <button id="monsterLevelUp" class="level-button">+</button>
         <span id="monsterLevelDisplay" class="level-text">mLevel: 1</span>
         <button id="monsterLevelDown" class="level-button">-</button>
+        <button id="monsterLevelUp" class="level-button">+</button>
     </div>
 <div id="treasureHUD" class="hud-box small-hud">
   <div class="loot-counter"><img src="treasure_common.svg"><span>0</span></div>
@@ -43,7 +49,6 @@
   <div class="loot-counter"><img src="treasure_legendary.svg"><span>0</span></div>
   <div class="loot-counter"><img src="treasure_mythic.svg"><span>0</span></div>
 </div>
-    <div id="fpsDisplay" class="hud-box small-hud">FPS: 0</div>
   </div>
   
   <script src="game.js"></script>

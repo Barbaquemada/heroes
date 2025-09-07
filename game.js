@@ -5,6 +5,7 @@ let enemies = [];
 let zoomLevel = 1;
 let paused = false;
 let gameOver = false;
+let gameSpeedMultiplier = 1.0;
 
 // Variables de vidas y marcador
 let playerHP = 100;
@@ -209,8 +210,8 @@ function movePlayer() {
         const deltaY = mousePosition.y - playerCenterY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         if (distance > playerSpeed) {
-            dx = (deltaX / distance) * playerSpeed;
-            dy = (deltaY / distance) * playerSpeed;
+            dx = (deltaX / distance) * playerSpeed * gameSpeedMultiplier;
+            dy = (deltaY / distance) * playerSpeed * gameSpeedMultiplier;
         } else {
             dx = deltaX;
             dy = deltaY;
@@ -286,6 +287,29 @@ function getMonsterSettings(level) {
 function updateMonsterLevelDisplay() {
     monsterLevelDisplay.innerText = `mLevel: ${currentMonsterLevel}`;
 }
+
+//Controles de los botones de velocidad
+const speedDisplay = document.getElementById('gameSpeedDisplay');
+const speedUpButton = document.getElementById('speedUp');
+const speedDownButton = document.getElementById('speedDown');
+
+const speedSteps = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+speedUpButton.addEventListener('click', () => {
+    let currentIndex = speedSteps.indexOf(gameSpeedMultiplier);
+    if (currentIndex < speedSteps.length - 1) {
+        gameSpeedMultiplier = speedSteps[currentIndex + 1];
+    }
+    speedDisplay.innerText = `Speed: ${gameSpeedMultiplier}x`;
+});
+
+speedDownButton.addEventListener('click', () => {
+    let currentIndex = speedSteps.indexOf(gameSpeedMultiplier);
+    if (currentIndex > 0) {
+        gameSpeedMultiplier = speedSteps[currentIndex - 1];
+    }
+    speedDisplay.innerText = `Speed: ${gameSpeedMultiplier}x`;
+});
 
 monsterLevelUpButton.addEventListener('click', () => {
     currentMonsterLevel++;
@@ -429,7 +453,7 @@ function moveEnemies() {
             enemy.element.remove();
             enemies = enemies.filter(e => e !== enemy);
         } else {
-            let currentEnemySpeed = settings.speed / enemy.gigantismFactor;
+            let currentEnemySpeed = (settings.speed / enemy.gigantismFactor) * gameSpeedMultiplier;
             if (enemy.isAfflicted) {
                 const playerSettings = getPlayerSettings(currentPlayerLevel);
                 currentEnemySpeed *= (1 - playerSettings.slowAmount);
@@ -657,7 +681,7 @@ function autoFire() {
         }
     }
     
-    autoFireTimer = setTimeout(autoFire, fireRate);
+    autoFireTimer = setTimeout(autoFire, fireRate / gameSpeedMultiplier);
 }
 
 // ⭐ CREACIÓN de una función `castSpell` genérica que gestiona todos los hechizos
@@ -717,10 +741,10 @@ function castSpell(event) {
     const dy = mouseY_world - (playerPosition.y + player.offsetHeight / 2);
     const angle = Math.atan2(dy, dx);
 
-    const speed = spellType === 'fireball' ? settings.fireballSpeed :
+   const speed = (spellType === 'fireball' ? settings.fireballSpeed :
                   (spellType === 'frostball' ? settings.frostballSpeed :
                   (spellType === 'lightball' ? settings.lightballSpeed :
-                  (spellType === 'shadowball' ? settings.shadowballSpeed : settings.natureballSpeed)));
+                  (spellType === 'shadowball' ? settings.shadowballSpeed : settings.natureballSpeed)))) * gameSpeedMultiplier;
     const damage = spellType === 'fireball' ? settings.fireballDamage :
                    (spellType === 'frostball' ? settings.frostballDamage :
                    (spellType === 'lightball' ? settings.lightballDamage :
@@ -811,7 +835,7 @@ function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chain
     const dx = targetEnemy.position.x - startX;
     const dy = targetEnemy.position.y - startY;
     const angle = Math.atan2(dy, dx);
-    const speed = settings.windshotSpeed;
+    const speed = settings.windshotSpeed * gameSpeedMultiplier;
 
     const spellInterval = setInterval(() => {
         if (paused) {
@@ -847,7 +871,7 @@ function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chain
             spellDiv.remove();
             clearInterval(spellInterval);
         }
-    }, 10);
+    }, 10 / gameSpeedMultiplier);
 }
 
 // ⭐ MODIFICA la función 'explode' para manejar Shadowball y sus efectos
@@ -883,22 +907,22 @@ function explode(spellDiv, enemy, damage, spellType) {
 
     if (spellType === 'frostball' && !enemy.isFrozen) {
         const settings = getPlayerSettings(currentPlayerLevel);
-        freezeEnemy(enemy, settings.freezeDuration);
+        freezeEnemy(enemy, settings.freezeDuration / gameSpeedMultiplier);
     } 
     else if (spellType === 'lightball' && !enemy.isConverted) {
         const settings = getPlayerSettings(currentPlayerLevel);
         if (Math.random() < settings.conversionChance) {
-            convertEnemy(enemy, settings.conversionDuration);
+            convertEnemy(enemy, settings.conversionDuration / gameSpeedMultiplier);
         }
     } 
     else if (spellType === 'shadowball' && !enemy.isAfflicted) {
         const settings = getPlayerSettings(currentPlayerLevel);
-        afflictEnemy(enemy, settings.dotDamage, settings.dotDuration, settings.slowDuration);
+        afflictEnemy(enemy, settings.dotDamage, settings.dotDuration / gameSpeedMultiplier, settings.slowDuration / gameSpeedMultiplier);
     
     } else if (spellType === 'natureball' && !enemy.isEntangled) {
         const settings = getPlayerSettings(currentPlayerLevel);
         if (Math.random() < settings.entangleChance) {
-            entangleEnemy(enemy, settings.entangleDuration);
+            entangleEnemy(enemy, settings.entangleDuration / gameSpeedMultiplier);
         }
     }
 
@@ -1375,6 +1399,20 @@ gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 document.addEventListener('keydown', (event) => {
     if (event.code === 'Space') {
         changeCharacterAndSpell();
+    }
+});
+
+// ⭐ Agrega control de velocidad con las teclas del teclado
+document.addEventListener('keydown', (event) => {
+    if (event.code === 'Space') {
+        changeCharacterAndSpell();
+    }
+    // ⭐ NUEVO: Control de velocidad con teclas + y -
+    if (event.key === '+' || event.code === 'NumpadAdd') {
+        document.getElementById('speedUp').click();
+    }
+    if (event.key === '-' || event.code === 'NumpadSubtract') {
+        document.getElementById('speedDown').click();
     }
 });
 
