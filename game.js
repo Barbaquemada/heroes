@@ -108,7 +108,8 @@ const characters = [
     { name: 'Cleric', src: 'char_cleric.svg' },
     { name: 'Witch', src: 'char_witch.svg' },
     { name: 'Ranger', src: 'char_ranger.svg' },
-    { name: 'Forestlord', src: 'char_forestlord.svg' }
+    { name: 'Forestlord', src: 'char_forestlord.svg' },
+    { name: 'Engineer', src: 'char_engineer.svg' }
 ];
 
 let characterIndex = 0;
@@ -138,11 +139,15 @@ function changeCharacterAndSpell() {
             break;
         case 'Ranger':
             currentSpell = 'windshot';
-            spellSelector.innerText = "Spell: 🌬️";
+            spellSelector.innerText = "Spell: 💨";
             break;
         case 'Forestlord':
             currentSpell = 'natureball';
             spellSelector.innerText = "Spell: 🌿";
+            break;
+        case 'Engineer':
+            currentSpell = 'gunshot';
+            spellSelector.innerText = "Spell: 💥";
             break;
     }
 }
@@ -475,6 +480,11 @@ function moveEnemies() {
                 currentEnemySpeed *= (1 - playerSettings.slowAmount);
             }
 
+            if (enemy.isLifted) {
+                const playerSettings = getPlayerSettings(currentPlayerLevel);
+                currentEnemySpeed *= (1 - playerSettings.windshotSlowAmount);
+            }
+
             let angle = Math.atan2(deltaY, deltaX);
             enemyPosition.x += Math.cos(angle) * currentEnemySpeed;
             enemyPosition.y += Math.sin(angle) * currentEnemySpeed;
@@ -535,7 +545,7 @@ function getPlayerSettings(level) {
     const baseConversionChance = 0.80;
     const baseConversionDuration = 5000;
 
-    // ⭐ Nuevos valores para Shadowball
+    // ⭐ Valores para Shadowball
     const baseShadowballDamage = 5;
     const baseShadowballSpeed = 9;
     const baseShadowballRange = 650;
@@ -544,7 +554,7 @@ function getPlayerSettings(level) {
     const baseSlowAmount = 0.6;
     const baseSlowDuration = 4000;
 
-    // ⭐ Nuevos valores para Natureball
+    // ⭐ Valores para Natureball
     const baseNatureballDamage = 10;
     const baseNatureballSpeed = 12;
     const baseNatureballRange = 600;
@@ -552,12 +562,20 @@ function getPlayerSettings(level) {
     const baseEntangleChance = 0.8;
     const baseNatureDotDamage = 10;
 
-const baseWindshotSpeed = 12;
-const baseWindshotRange = 750;
-const baseWindshotDamage = 10; // Daño por cada impacto
-const baseWindshotChains = 3; // Número de cadenas (ramificaciones)
-const baseWindshotChainRange = 200; // Rango para encontrar al siguiente objetivo
+    const baseGunshotSpeed = 12;
+    const baseGunshotRange = 750;
+    const baseGunshotDamage = 10;
+    const baseGunshotChains = 3;
+    const baseGunshotChainRange = 200;
 
+    // ⭐ Valores para Windshot
+    const baseWindshotDamage = 35;
+    const baseWindshotSpeed = 15;
+    const baseWindshotRange = 800;
+    const baseWindshotPushbackRadius = 50;
+    const baseWindshotPushbackForce = 50;
+    const baseWindshotLiftDuration = 2000;
+    const baseWindshotSlowAmount = 0.8;
 
     const speed = baseSpeed;
     const maxHp = Math.round(baseHp + (level - 1) * 20);
@@ -593,20 +611,30 @@ const baseWindshotChainRange = 200; // Rango para encontrar al siguiente objetiv
     const entangleDuration = baseEntangleDuration + (level - 1) * 150;
     const entangleChance = Math.min(0.9, baseEntangleChance + (level - 1) * 0.02);
 
-const windshotSpeed = baseWindshotSpeed + (level - 1) * 0.1;
-const windshotRange = baseWindshotRange + (level - 1) * 70;
-const windshotDamage = Math.round(baseWindshotDamage + (level - 1) * 35);
-const windshotChains = baseWindshotChains + Math.floor((level - 1) / 5); // Aumenta una cadena cada 5 niveles
-const windshotChainRange = baseWindshotChainRange + (level - 1) * 20;
+    const gunshotSpeed = baseGunshotSpeed + (level - 1) * 0.1;
+    const gunshotRange = baseGunshotRange + (level - 1) * 70;
+    const gunshotDamage = Math.round(baseGunshotDamage + (level - 1) * 35);
+    const gunshotChains = baseGunshotChains + Math.floor((level - 1) / 5);
+    const gunshotChainRange = baseGunshotChainRange + (level - 1) * 20;
 
-    return { 
-        speed, maxHp, 
-        fireballDamage, fireballSpeed, fireballRange, fireRate, 
-        frostballDamage, frostballSpeed, frostballRange, freezeDuration, 
+    // ⭐ Escalado de los valores de Windshot - CORREGIDO
+    const windshotDamage = Math.round(baseWindshotDamage + (level - 1) * 15);
+    const windshotSpeed = baseWindshotSpeed + (level - 1) * 0.1;
+    const windshotRange = baseWindshotRange + (level - 1) * 60;
+    const windshotPushbackRadius = baseWindshotPushbackRadius + (level - 1) * 5;
+    const windshotPushbackForce = baseWindshotPushbackForce + (level - 1) * 2;
+    const windshotLiftDuration = baseWindshotLiftDuration + (level - 1) * 50;
+    const windshotSlowAmount = baseWindshotSlowAmount;
+
+    return {
+        speed, maxHp,
+        fireballDamage, fireballSpeed, fireballRange, fireRate,
+        frostballDamage, frostballSpeed, frostballRange, freezeDuration,
         lightballDamage, lightballSpeed, lightballRange, conversionChance, conversionDuration,
         shadowballDamage, shadowballSpeed, shadowballRange, dotDamage, dotDuration, slowAmount, slowDuration,
         natureballDamage, natureballSpeed, natureballRange, entangleDuration, entangleChance, natureDotDamage,
-windshotSpeed, windshotRange, windshotDamage, windshotChains, windshotChainRange
+        gunshotSpeed, gunshotRange, gunshotDamage, gunshotChains, gunshotChainRange,
+        windshotDamage, windshotSpeed, windshotRange, windshotPushbackRadius, windshotPushbackForce, windshotLiftDuration, windshotSlowAmount,
     };
 }
 
@@ -680,11 +708,12 @@ function autoFire() {
             minDist = Math.sqrt(Math.pow(targetEnemy.position.x - playerPosition.x, 2) + Math.pow(targetEnemy.position.y - playerPosition.y, 2));
         }
 
-        const spellRange = currentSpell === 'fireball' ? settings.fireballRange : 
-                           (currentSpell === 'frostball' ? settings.frostballRange : 
-                           (currentSpell === 'lightball' ? settings.lightballRange : 
-                           (currentSpell === 'shadowball' ? settings.shadowballRange : 
-                           (currentSpell === 'natureball' ? settings.natureballRange : settings.windshotRange)))); 
+        const spellRange = currentSpell === 'fireball' ? settings.fireballRange :
+                           (currentSpell === 'frostball' ? settings.frostballRange :
+                           (currentSpell === 'lightball' ? settings.lightballRange :
+                           (currentSpell === 'shadowball' ? settings.shadowballRange :
+                           (currentSpell === 'natureball' ? settings.natureballRange :
+                           (currentSpell === 'windshot' ? settings.windshotRange : settings.gunshotRange)))));
 
         if (targetEnemy && minDist < spellRange) {
             const enemyX_screen = (targetEnemy.position.x * zoomLevel) + cameraX;
@@ -707,8 +736,8 @@ function castSpell(event) {
     const settings = getPlayerSettings(currentPlayerLevel);
     const spellType = event.spellType;
     
-    // ⭐ Lógica específica para Windshot
-    if (spellType === 'windshot') {
+    // ⭐ Lógica específica para Gunshot
+    if (spellType === 'gunshot') {
         let targetEnemy = null;
         let minDist = Infinity;
         for (let enemy of enemies) {
@@ -721,12 +750,12 @@ function castSpell(event) {
             }
         }
         if (targetEnemy) {
-            // ⭐ Pasa la posición central del jugador a la función castWindshot
+            // ⭐ Pasa la posición central del jugador a la función castGunshot
             const centeredPlayerPosition = { 
                 x: playerPosition.x + player.offsetWidth / 2, 
                 y: playerPosition.y + player.offsetHeight / 2 
             };
-            castWindshot(centeredPlayerPosition, targetEnemy);
+            castGunshot(centeredPlayerPosition, targetEnemy);
         }
         return;
     }
@@ -741,6 +770,8 @@ function castSpell(event) {
         spellDiv.classList.add('lightball');
     } else if (spellType === 'shadowball') {
         spellDiv.classList.add('shadowball');
+    } else if (spellType === 'windshot') { // ⭐ NUEVO: Lógica para Windshot
+        spellDiv.classList.add('windshot');
     } else { // natureball
         spellDiv.classList.add('natureball');
     }
@@ -758,22 +789,26 @@ function castSpell(event) {
     const angle = Math.atan2(dy, dx);
 
    const speed = (spellType === 'fireball' ? settings.fireballSpeed :
-                  (spellType === 'frostball' ? settings.frostballSpeed :
-                  (spellType === 'lightball' ? settings.lightballSpeed :
-                  (spellType === 'shadowball' ? settings.shadowballSpeed : settings.natureballSpeed)))) * gameSpeedMultiplier;
-    const damage = spellType === 'fireball' ? settings.fireballDamage :
-                   (spellType === 'frostball' ? settings.frostballDamage :
-                   (spellType === 'lightball' ? settings.lightballDamage :
-                   (spellType === 'shadowball' ? settings.shadowballDamage : settings.natureballDamage)));
-    const range = spellType === 'fireball' ? settings.fireballRange :
-                  (spellType === 'frostball' ? settings.frostballRange :
-                  (spellType === 'lightball' ? settings.lightballRange :
-                  (spellType === 'shadowball' ? settings.shadowballRange : settings.natureballRange)));
+                 (spellType === 'frostball' ? settings.frostballSpeed :
+                 (spellType === 'lightball' ? settings.lightballSpeed :
+                 (spellType === 'shadowball' ? settings.shadowballSpeed :
+                 (spellType === 'windshot' ? settings.windshotSpeed : settings.natureballSpeed))))) * gameSpeedMultiplier;
+   const damage = spellType === 'fireball' ? settings.fireballDamage :
+                 (spellType === 'frostball' ? settings.frostballDamage :
+                 (spellType === 'lightball' ? settings.lightballDamage :
+                 (spellType === 'shadowball' ? settings.shadowballDamage :
+                 (spellType === 'windshot' ? settings.windshotDamage : settings.natureballDamage))));
+   const range = spellType === 'fireball' ? settings.fireballRange :
+                 (spellType === 'frostball' ? settings.frostballRange :
+                 (spellType === 'lightball' ? settings.lightballRange :
+                 (spellType === 'shadowball' ? settings.shadowballRange :
+                 (spellType === 'windshot' ? settings.windshotRange : settings.natureballRange))));
+
     let traveled = 0;
 
     const spellInterval = setInterval(() => {
         if (paused) {
-            return; // ⭐ CÓDIGO CORREGIDO: solo detiene el movimiento, no elimina el hechizo.
+            return;
         }
 
         const x = parseInt(spellDiv.style.left) + Math.cos(angle) * speed;
@@ -804,13 +839,13 @@ function castSpell(event) {
     }, 30);
 }
 
-// ⭐ NUEVA FUNCIÓN: Lanza un Windshot que puede ramificarse
-function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chainCount = 0) {
+// ⭐ NUEVA FUNCIÓN: Lanza un Gunshot que puede ramificarse
+function castGunshot(origin, initialTargetEnemy, usedEnemies = new Set(), chainCount = 0) {
     if (paused) return;
 
     const settings = getPlayerSettings(currentPlayerLevel);
     const spellDiv = document.createElement('div');
-    spellDiv.classList.add('windshot');
+    spellDiv.classList.add('gunshot');
     gameContainer.appendChild(spellDiv);
 
     let targetEnemy = initialTargetEnemy;
@@ -825,7 +860,7 @@ function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chain
                 const dx = enemy.position.x - origin.x;
                 const dy = enemy.position.y - origin.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < minDist && dist < settings.windshotChainRange) {
+                if (dist < minDist && dist < settings.gunshotChainRange) {
                     minDist = dist;
                     targetEnemy = enemy;
                 }
@@ -851,7 +886,7 @@ function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chain
     const dx = targetEnemy.position.x - startX;
     const dy = targetEnemy.position.y - startY;
     const angle = Math.atan2(dy, dx);
-    const speed = settings.windshotSpeed * gameSpeedMultiplier;
+    const speed = settings.gunshotSpeed * gameSpeedMultiplier;
 
     const spellInterval = setInterval(() => {
         if (paused) {
@@ -871,13 +906,70 @@ function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chain
 
         if (dist < spellThreshold) {
             // Impacto!
-            explode(spellDiv, targetEnemy, settings.windshotDamage, 'windshot');
+            explode(spellDiv, targetEnemy, settings.gunshotDamage, 'gunshot');
 
             // ⭐ Reacción en cadena
-            if (chainCount < settings.windshotChains) {
-                castWindshot(targetEnemy.position, null, usedEnemies, chainCount + 1);
+            if (chainCount < settings.gunshotChains) {
+                castGunshot(targetEnemy.position, null, usedEnemies, chainCount + 1);
             }
 
+            clearInterval(spellInterval);
+            return;
+        }
+
+        // Si se pasa del rango, se elimina
+        if (Math.sqrt(Math.pow(x - startX, 2) + Math.pow(y - startY, 2)) > settings.gunshotRange) {
+            spellDiv.remove();
+            clearInterval(spellInterval);
+        }
+    }, 10 / gameSpeedMultiplier);
+}
+
+// ⭐ NUEVA FUNCIÓN: Lanza el hechizo Windshot
+function castWindshot(event) {
+    if (paused) return;
+
+    const settings = getPlayerSettings(currentPlayerLevel);
+    const spellDiv = document.createElement('div');
+    spellDiv.classList.add('windshot');
+    gameContainer.appendChild(spellDiv);
+
+    // Encuentra el enemigo más cercano
+    let targetEnemy = findClosestEnemy();
+    if (!targetEnemy) {
+        spellDiv.remove();
+        return;
+    }
+
+    // Posición inicial y ángulo hacia el objetivo
+    const startX = playerPosition.x;
+    const startY = playerPosition.y;
+    spellDiv.style.left = `${startX}px`;
+    spellDiv.style.top = `${startY}px`;
+
+    const dx = targetEnemy.position.x - startX;
+    const dy = targetEnemy.position.y - startY;
+    const angle = Math.atan2(dy, dx);
+    const speed = settings.windshotSpeed * gameSpeedMultiplier;
+
+    const spellInterval = setInterval(() => {
+        if (paused) {
+            return;
+        }
+
+        const x = parseFloat(spellDiv.style.left) + Math.cos(angle) * speed;
+        const y = parseFloat(spellDiv.style.top) + Math.sin(angle) * speed;
+        spellDiv.style.left = `${x}px`;
+        spellDiv.style.top = `${y}px`;
+
+        // Verificación de colisión
+        const dist = Math.sqrt(Math.pow(x - targetEnemy.position.x, 2) + Math.pow(y - targetEnemy.position.y, 2));
+        const monsterRadius = getMonsterRadius(targetEnemy);
+        const spellThreshold = monsterRadius;
+
+        if (dist < spellThreshold) {
+            // Impacto!
+            explode(spellDiv, targetEnemy, settings.windshotDamage, 'windshot');
             clearInterval(spellInterval);
             return;
         }
@@ -894,13 +986,11 @@ function castWindshot(origin, initialTargetEnemy, usedEnemies = new Set(), chain
 function explode(spellDiv, enemy, damage, spellType) {
     if (paused) return;
 
-    // NO MODIFICAR el daño. El daño es el daño base, no se multiplica por gigantismo
     let finalDamage = damage;
 
     const explosion = document.createElement("div");
     explosion.classList.add("explosion");
     
-    // ⭐ Añade el estilo de la explosión para el Windshot
     if (spellType === 'frostball') {
         explosion.classList.add('frost');
     } else if (spellType === 'lightball') {
@@ -909,8 +999,34 @@ function explode(spellDiv, enemy, damage, spellType) {
         explosion.classList.add('shadow');
     } else if (spellType === 'natureball') {
         explosion.classList.add('nature');
-    } else if (spellType === 'windshot') { // ⭐ Lógica para Windshot
+    } else if (spellType === 'gunshot') {
+        explosion.classList.add('gun');
+    } else if (spellType === 'windshot') { 
         explosion.classList.add('wind');
+        const settings = getPlayerSettings(currentPlayerLevel);
+        
+        enemies.forEach(otherEnemy => {
+            const dxFromImpact = otherEnemy.position.x - enemy.position.x;
+            const dyFromImpact = otherEnemy.position.y - enemy.position.y;
+            const distFromImpact = Math.sqrt(dxFromImpact * dxFromImpact + dyFromImpact * dyFromImpact);
+
+            if (distFromImpact <= settings.windshotPushbackRadius) {
+                const dxFromPlayer = otherEnemy.position.x - playerPosition.x;
+                const dyFromPlayer = otherEnemy.position.y - playerPosition.y;
+                const pushbackAngle = Math.atan2(dyFromPlayer, dxFromPlayer);
+
+                let pushbackForce = settings.windshotPushbackForce;
+                // ⭐ ¡CORREGIDO! Divide el empuje por el factor de gigantismo. Si no existe, usa 1.
+                pushbackForce /= (otherEnemy.gigantismFactor || 1); 
+
+                otherEnemy.position.x += Math.cos(pushbackAngle) * pushbackForce;
+                otherEnemy.position.y += Math.sin(pushbackAngle) * pushbackForce;
+                otherEnemy.element.style.transform = `translate(${otherEnemy.position.x}px, ${otherEnemy.position.y}px) scale(${otherEnemy.gigantismFactor})`;
+                
+                // ⭐ NUEVO: Aplica el efecto "levantado" y ralentización
+                applyLiftedEffect(otherEnemy, settings.windshotLiftDuration, settings.windshotSlowAmount / gameSpeedMultiplier);
+            }
+        });
     }
 
     explosion.style.left = spellDiv.style.left;
@@ -924,17 +1040,17 @@ function explode(spellDiv, enemy, damage, spellType) {
     if (spellType === 'frostball' && !enemy.isFrozen) {
         const settings = getPlayerSettings(currentPlayerLevel);
         freezeEnemy(enemy, settings.freezeDuration / gameSpeedMultiplier);
-    } 
+    }
     else if (spellType === 'lightball' && !enemy.isConverted) {
         const settings = getPlayerSettings(currentPlayerLevel);
         if (Math.random() < settings.conversionChance) {
             convertEnemy(enemy, settings.conversionDuration / gameSpeedMultiplier);
         }
-    } 
+    }
     else if (spellType === 'shadowball' && !enemy.isAfflicted) {
         const settings = getPlayerSettings(currentPlayerLevel);
         afflictEnemy(enemy, settings.dotDamage, settings.dotDuration / gameSpeedMultiplier, settings.slowDuration / gameSpeedMultiplier);
-    
+
     } else if (spellType === 'natureball' && !enemy.isEntangled) {
         const settings = getPlayerSettings(currentPlayerLevel);
         if (Math.random() < settings.entangleChance) {
@@ -947,7 +1063,7 @@ function explode(spellDiv, enemy, damage, spellType) {
         enemies = enemies.filter(e => e !== enemy);
         killCount++;
         updateHUD();
-dropLoot(enemy.position.x, enemy.position.y); // ⭐ Añadido: Suelta el botín al morir
+        dropLoot(enemy.position.x, enemy.position.y);
     }
     spellDiv.remove();
 }
@@ -1110,6 +1226,33 @@ dropLoot(enemy.position.x, enemy.position.y); // ⭐ Añadido: Suelta el botín 
         enemy.isEntangled = false;
         enemy.element.classList.remove('entangled');
     }, duration);
+}
+
+// ⭐ NUEVA FUNCIÓN: Aplica el efecto de "levantado" y ralentización
+// ⭐ FUNCIÓN ACTUALIZADA: Aplica el efecto de "levantado"
+function applyLiftedEffect(enemy, duration, slowAmount) {
+    if (enemy.isLifted) return;
+
+    enemy.isLifted = true;
+    enemy.originalSpeed = enemy.speed;
+    enemy.speed *= slowAmount;
+    
+    // ⭐ AÑADE la clase CSS directamente
+    enemy.element.classList.add('lifted'); 
+
+    const liftInterval = setInterval(() => {
+        if (!paused) {
+            duration -= 100;
+        }
+        if (duration <= 0 || !enemy.element.parentNode) {
+            clearInterval(liftInterval);
+            enemy.isLifted = false;
+            enemy.speed = enemy.originalSpeed;
+            
+            // ⭐ REMUEVE la clase CSS
+            enemy.element.classList.remove('lifted');
+        }
+    }, 100);
 }
 
 // --- Numeritos flotantes ---

@@ -387,18 +387,18 @@ body, html {
     font-size: 1.1em; /* Un poco más grande para distinguirlo */
 }
 
-/* ⭐ Nuevo estilo para el Windshot */
-.windshot {
+/* ⭐ Nuevo estilo para el Gunshot */
+.gunshot {
   position: absolute;
   width: 15px;
   height: 15px;
-  background: radial-gradient(circle, #E0FFFF 60%, #FFFFFF); /* Blanco muy claro a blanco */
+  background: radial-gradient(circle, #000000 60%, #333333); /* ⭐ ¡CORREGIDO! Color negro a gris oscuro */
   border-radius: 50%;
 }
 
-/* ⭐ Nueva clase para la explosión de Windshot */
-.explosion.wind {
-  background: radial-gradient(circle, #E0FFFF, #FFFFFF, transparent); /* Blanco a transparente */
+/* ⭐ Nueva clase para la explosión de Gunshot */
+.explosion.gun {
+  background: radial-gradient(circle, #333333, #000000, transparent); /* ⭐ ¡CORREGIDO! Gris oscuro a negro a transparente */
 }
 
 body, html {
@@ -458,6 +458,51 @@ body, html {
     filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); 
 }
 
+
+
+
+/* ⭐ NUEVO: Estilo para Windshot */
+.windshot {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #FFFFFF 60%, #E0FFFF);
+  border-radius: 50%;
+}
+
+
+/* ⭐ NUEVO: Estilo para la explosión de Windshot */
+.explosion.wind {
+  background: radial-gradient(circle, white, transparent);
+}
+
+/* ⭐ Estilo del efecto "levantado" (Lifted / Windshot) */
+.enemy.lifted::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+
+  /* Gradiente radial blanquecino */
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(220, 220, 220, 0.6) 70%);
+  
+  /* Halo blanco con box-shadow */
+  box-shadow: 0 0 10px 3px rgba(255, 255, 255, 0.8),
+              inset 0 0 5px rgba(255, 255, 255, 0.5);
+
+  z-index: 1;
+  opacity: 0;
+}
+
+/* ⭐ Cuando el enemigo está levantado, el círculo se hace visible */
+.enemy.lifted::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
 /* Reglas de CSS para optimizar el rendimiento en dispositivos móviles */
 @media (max-width: 768px) {
     /* Desactivar la sombra en los elementos de la interfaz (HUD) */
@@ -468,9 +513,12 @@ body, html {
     /* Desactivar las sombras en todos los estados de los enemigos */
     .enemy.frozen::before,
     .enemy.converted::before,
-    .enemy.afflicted::before {
+    .enemy.afflicted::before,
+    .enemy.lifted::before { /* ⭐ AÑADIDO: Ahora incluye la burbuja del windshot */
         box-shadow: none;
         filter: none;
+        background-color: transparent; /* ⭐ Desactiva también el gradiente */
+        border: none; /* ⭐ Desactiva el borde para eliminar el halo */
     }
 
     /* Desactivar la animación 'pulsating' del contenedor del botín */
