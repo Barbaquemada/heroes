@@ -152,7 +152,7 @@ function changeCharacterAndSpell() {
             break;
         case 'Barbarian':
             currentSpell = 'bloodStrike';
-             spellSelector.innerText = "Spell: 💥";
+             spellSelector.innerText = "Spell: 🩸";
             break;
     }
 }
