@@ -531,3 +531,69 @@ body, html {
         filter: none;
     }
 }
+
+/* ⭐ ESTILO MODIFICADO: Ahora el efecto es una explosión rápida y un desvanecimiento lento */
+.blood-explosion {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background-image: url('blood_splash.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    transform: scale(0);
+    opacity: 0;
+    /* ⭐ El cambio principal está aquí: duración total de 1.5s */
+    animation: blood-burst 1.5s ease-out forwards;
+    z-index: 200;
+    pointer-events: none;
+}
+
+@keyframes blood-burst {
+    0% {
+        transform: scale(0);
+        opacity: 0.8;
+    }
+    10% {
+        /* ⭐ ¡El estallido ocurre en solo el 10% del tiempo total! */
+        transform: scale(1.5);
+        opacity: 1;
+    }
+    100% {
+        /* ⭐ El desvanecimiento ocurre durante el 90% restante del tiempo */
+        transform: scale(1.5); /* Se mantiene el tamaño del estallido */
+        opacity: 0;
+    }
+}
+
+/* ⭐ NUEVO: Estilos para el efecto en el jugador (gradiente) */
+.blood-strike-player {
+    position: absolute;
+    width: 150px; /* Tamaño del efecto del jugador */
+    height: 150px; /* Tamaño del efecto del jugador */
+    border-radius: 50%; /* Circular para un aura */
+    background: radial-gradient(circle, rgba(255, 0, 0, 0.6) 0%, rgba(139, 0, 0, 0.3) 50%, rgba(255, 0, 0, 0) 100%);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.blood-strike-player.active {
+    opacity: 1;
+    transform: scale(1.1); /* Se expande ligeramente */
+}
+
+/* ⭐ NUEVO: Estilo para el texto de curación */
+.heal-text {
+  position: absolute;
+  color: #32CD32; /* Verde Lima */
+  font-weight: bold;
+  font-size: 18px;
+  animation: floatUp 0.8s ease-out forwards; /* Reutiliza la animación floatUp */
+  pointer-events: none; /* Ignora eventos de ratón */
+  left: 50%;
+  top: 50%;
+  z-index: 800; /* Asegura que esté por encima de otros elementos */
+}

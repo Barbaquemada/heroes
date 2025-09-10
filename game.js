@@ -109,7 +109,8 @@ const characters = [
     { name: 'Witch', src: 'char_witch.svg' },
     { name: 'Ranger', src: 'char_ranger.svg' },
     { name: 'Forestlord', src: 'char_forestlord.svg' },
-    { name: 'Engineer', src: 'char_engineer.svg' }
+    { name: 'Engineer', src: 'char_engineer.svg' },
+    { name: 'Barbarian', src: 'char_barbarian.svg' }
 ];
 
 let characterIndex = 0;
@@ -148,6 +149,10 @@ function changeCharacterAndSpell() {
         case 'Engineer':
             currentSpell = 'gunshot';
             spellSelector.innerText = "Spell: 💥";
+            break;
+        case 'Barbarian':
+            currentSpell = 'bloodStrike';
+             spellSelector.innerText = "Spell: 💥";
             break;
     }
 }
@@ -577,6 +582,13 @@ function getPlayerSettings(level) {
     const baseWindshotLiftDuration = 2000;
     const baseWindshotSlowAmount = 0.8;
 
+    // ⭐ NUEVO: Valores para el Bárbaro (BloodStrike)
+    const baseBloodstrikeDamage = 150; 
+    const baseBloodstrikeFireRate = 500; 
+    const bloodstrikeRange = 100;
+    const baseBloodstrikeLifesteal = 5;
+
+
     const speed = baseSpeed;
     const maxHp = Math.round(baseHp + (level - 1) * 20);
     const fireballDamage = Math.round(baseFireballDamage + (level - 1) * 50);
@@ -626,6 +638,11 @@ function getPlayerSettings(level) {
     const windshotLiftDuration = baseWindshotLiftDuration + (level - 1) * 50;
     const windshotSlowAmount = baseWindshotSlowAmount;
 
+    // ⭐ NUEVO: Escalado de los valores del Bárbaro
+    const bloodstrikeDamage = Math.round(baseBloodstrikeDamage + (level - 1) * 25);
+    const bloodstrikeFireRate = Math.max(150, baseBloodstrikeFireRate - (level - 1) * 5);
+const bloodstrikeLifesteal = Math.round(baseBloodstrikeLifesteal + (level - 1) * 1); // ⭐ NUEVO: Escalado de la curación
+
     return {
         speed, maxHp,
         fireballDamage, fireballSpeed, fireballRange, fireRate,
@@ -635,6 +652,7 @@ function getPlayerSettings(level) {
         natureballDamage, natureballSpeed, natureballRange, entangleDuration, entangleChance, natureDotDamage,
         gunshotSpeed, gunshotRange, gunshotDamage, gunshotChains, gunshotChainRange,
         windshotDamage, windshotSpeed, windshotRange, windshotPushbackRadius, windshotPushbackForce, windshotLiftDuration, windshotSlowAmount,
+        bloodstrikeDamage, bloodstrikeFireRate, bloodstrikeRange, bloodstrikeLifesteal
     };
 }
 
@@ -671,6 +689,13 @@ function autoFire() {
     if (paused || gameOver) return;
     const settings = getPlayerSettings(currentPlayerLevel);
     let fireRate = settings.fireRate;
+
+
+    // ⭐ Ajusta la cadencia de ataque según el hechizo/personaje
+    if (currentSpell === 'bloodStrike') {
+        fireRate = settings.bloodstrikeFireRate;
+    }
+
     let targetEnemy = null;
     let minDist = Infinity;
     
@@ -708,12 +733,15 @@ function autoFire() {
             minDist = Math.sqrt(Math.pow(targetEnemy.position.x - playerPosition.x, 2) + Math.pow(targetEnemy.position.y - playerPosition.y, 2));
         }
 
+        // ⭐ Ajusta el rango de ataque según el hechizo
         const spellRange = currentSpell === 'fireball' ? settings.fireballRange :
                            (currentSpell === 'frostball' ? settings.frostballRange :
                            (currentSpell === 'lightball' ? settings.lightballRange :
                            (currentSpell === 'shadowball' ? settings.shadowballRange :
                            (currentSpell === 'natureball' ? settings.natureballRange :
-                           (currentSpell === 'windshot' ? settings.windshotRange : settings.gunshotRange)))));
+                           (currentSpell === 'windshot' ? settings.windshotRange :
+                           (currentSpell === 'bloodStrike' ? settings.bloodstrikeRange : // ⭐ CAMBIO: Rango para el BloodStrike
+                           settings.gunshotRange))))));
 
         if (targetEnemy && minDist < spellRange) {
             const enemyX_screen = (targetEnemy.position.x * zoomLevel) + cameraX;
@@ -729,12 +757,120 @@ function autoFire() {
     autoFireTimer = setTimeout(autoFire, fireRate / gameSpeedMultiplier);
 }
 
+// ⭐ NUEVA FUNCIÓN: Muestra texto de curación flotante sobre el jugador
+function showHealing(amount) {
+    const healText = document.createElement('div');
+    healText.classList.add('heal-text');
+    healText.textContent = `+${amount}`; // Muestra un '+' antes de la cantidad
+    
+    // Posiciona el texto sobre el centro del jugador
+    const playerRect = player.getBoundingClientRect();
+    const gameContainerRect = gameContainer.getBoundingClientRect();
+
+    // Calcula la posición relativa al gameContainer
+    const xPos = playerPosition.x + player.offsetWidth / 2;
+    const yPos = playerPosition.y - 20; // Un poco por encima del jugador
+    
+    healText.style.left = `${xPos}px`;
+    healText.style.top = `${yPos}px`;
+    
+    gameContainer.appendChild(healText);
+
+    // Centra el texto CSS (ya está en el CSS, pero para asegurar)
+    healText.style.transform = 'translate(-50%, -50%)';
+
+    // Elimina el elemento después de que termine la animación
+    healText.addEventListener('animationend', () => {
+        healText.remove();
+    }, { once: true });
+}
+
 // ⭐ CREACIÓN de una función `castSpell` genérica que gestiona todos los hechizos
 function castSpell(event) {
     if (paused) return;
 
     const settings = getPlayerSettings(currentPlayerLevel);
     const spellType = event.spellType;
+
+    // ⭐ Lógica para el ataque cuerpo a cuerpo (BloodStrike)
+    if (spellType === 'bloodStrike') {
+        const bloodstrikeRange = settings.bloodstrikeRange;
+        const bloodstrikeDamage = settings.bloodstrikeDamage;
+    const lifestealAmount = settings.bloodstrikeLifesteal;
+
+        // ⭐ Efecto visual en el JUGADOR al lanzar la habilidad (gradiente)
+        const playerEffect = document.createElement('div');
+        playerEffect.classList.add('blood-strike-player'); // Nueva clase para el jugador
+        playerEffect.style.left = `${playerPosition.x + player.offsetWidth / 2 - 75}px`; // Centrado en el jugador
+        playerEffect.style.top = `${playerPosition.y + player.offsetHeight / 2 - 75}px`;
+        gameContainer.appendChild(playerEffect);
+
+        requestAnimationFrame(() => {
+            playerEffect.classList.add('active');
+        });
+
+        setTimeout(() => {
+            playerEffect.classList.remove('active');
+            playerEffect.addEventListener('transitionend', () => {
+                playerEffect.remove();
+            }, { once: true });
+        }, 150); // Ajusta este tiempo para que la animación del jugador sea visible
+
+
+        // Itera sobre todos los enemigos para aplicar el daño
+        enemies.forEach(enemy => {
+            const dx = enemy.position.x - playerPosition.x;
+            const dy = enemy.position.y - playerPosition.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= bloodstrikeRange) {
+                // Aplica daño
+                enemy.hp -= bloodstrikeDamage;
+                showDamage(enemy, bloodstrikeDamage);
+
+                // Cura al jugador por el daño infligido
+                const oldHP = playerHP; 
+                playerHP += lifestealAmount;
+                
+                if (playerHP > maxPlayerHP) {
+                    playerHP = maxPlayerHP;
+                }
+
+                const actualHealedAmount = playerHP - oldHP;
+                
+                updateHUD();
+
+                // ⭐ NUEVO: Muestra el texto de curación sobre el jugador
+                if (actualHealedAmount > 0) {
+                    showHealing(actualHealedAmount);
+                }
+
+                // ⭐ Crea el efecto de EXPLOSIÓN (SVG) en el ENEMIGO
+                const explosionEffect = document.createElement('div');
+                explosionEffect.classList.add('blood-explosion'); // Clase para el efecto en enemigos
+                
+                // Posiciona el efecto en el centro del enemigo
+                explosionEffect.style.left = `${enemy.position.x + enemy.element.offsetWidth / 2}px`;
+                explosionEffect.style.top = `${enemy.position.y + enemy.element.offsetHeight / 2}px`;
+                gameContainer.appendChild(explosionEffect);
+
+                // Elimina el elemento del DOM después de que la animación termine
+                explosionEffect.addEventListener('animationend', () => {
+                    explosionEffect.remove();
+                }, { once: true });
+
+
+                if (enemy.hp <= 0) {
+                    enemy.element.remove();
+                    enemies = enemies.filter(e => e !== enemy);
+                    killCount++;
+                    updateHUD();
+                    dropLoot(enemy.position.x, enemy.position.y);
+                }
+            }
+        });
+        return;
+    }
     
     // ⭐ Lógica específica para Gunshot
     if (spellType === 'gunshot') {
@@ -1253,6 +1389,60 @@ function applyLiftedEffect(enemy, duration, slowAmount) {
             enemy.element.classList.remove('lifted');
         }
     }, 100);
+}
+
+// ⭐ NUEVO: Lógica del ataque cuerpo a cuerpo
+function createBloodStrike(x, y) {
+    const strike = document.createElement('div');
+    strike.classList.add('blood-strike');
+    gameContainer.appendChild(strike);
+
+    const playerRect = player.getBoundingClientRect();
+    const playerX = playerRect.left + playerRect.width / 2;
+    const playerY = playerRect.top + playerRect.height / 2;
+
+    const angle = Math.atan2(y - playerY, x - playerX);
+    strike.style.left = `${playerX - strike.offsetWidth / 2}px`;
+    strike.style.top = `${playerY - strike.offsetHeight / 2}px`;
+    strike.style.transform = `translate(-50%, -50%) rotate(${angle - Math.PI / 2}rad)`;
+
+    requestAnimationFrame(() => {
+        strike.classList.add('active');
+    });
+
+    setTimeout(() => {
+        strike.remove();
+    }, 200); // El efecto dura 200ms
+}
+
+function checkForMeleeCollisions(x, y) {
+    const playerX = parseFloat(player.style.left);
+    const playerY = parseFloat(player.style.top);
+    const meleeRange = 100; // Distancia de ataque
+
+    enemies.forEach(enemy => {
+        const enemyX = parseFloat(enemy.style.left);
+        const enemyY = parseFloat(enemy.style.top);
+        const distance = Math.sqrt(Math.pow(playerX - enemyX, 2) + Math.pow(playerY - enemyY, 2));
+
+        if (distance < meleeRange) {
+            // ⭐ APLICA DAÑO AL ENEMIGO
+            let enemyHP = parseFloat(enemy.dataset.hp);
+            const playerDamage = getPlayerSettings().spellDamage;
+            enemyHP -= playerDamage;
+            enemy.dataset.hp = enemyHP;
+            
+            // ⭐ DEJA EL ENEMY HP DISPLAY
+            const enemyHPDisplay = enemy.querySelector('.enemy-hp');
+            if (enemyHPDisplay) {
+                enemyHPDisplay.innerText = `${Math.max(0, enemyHP)} / ${enemy.dataset.maxhp}`;
+                enemyHPDisplay.style.width = `${(enemyHP / enemy.dataset.maxhp) * 100}%`;
+                if (enemyHP <= 0) {
+                    killEnemy(enemy);
+                }
+            }
+        }
+    });
 }
 
 // --- Numeritos flotantes ---
