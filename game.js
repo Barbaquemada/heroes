@@ -1745,12 +1745,6 @@ autoFire();
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // ⭐ Cambia de personaje con la barra espaciadora
-document.addEventListener('keydown', (event) => {
-    if (event.code === 'Space') {
-        changeCharacterAndSpell();
-    }
-});
-
 // ⭐ Agrega control de velocidad con las teclas del teclado
 document.addEventListener('keydown', (event) => {
     if (event.code === 'Space') {
