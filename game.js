@@ -585,8 +585,8 @@ function getPlayerSettings(level) {
     // ⭐ NUEVO: Valores para el Bárbaro (BloodStrike)
     const baseBloodstrikeDamage = 150; 
     const baseBloodstrikeFireRate = 500; 
-    const bloodstrikeRange = 100;
-    const baseBloodstrikeLifesteal = 5;
+    const bloodstrikeRange = 150;
+    const baseBloodstrikeLifesteal = 25;
 
 
     const speed = baseSpeed;
