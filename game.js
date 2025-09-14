@@ -25,6 +25,11 @@ const spellSelector = document.getElementById('spellSelector');
 const playerSprite = document.querySelector('#player img');
 let isMago = true;
 
+// ⭐ NUEVO: Variables para el selector de género
+let selectedGender = 'm'; // Por defecto, empieza con 'm' (masculino)
+const genderMaleButton = document.getElementById('genderMale');
+const genderFemaleButton = document.getElementById('genderFemale');
+
 // ⭐ Variables para el sistema de loot y contador
 let droppedLoot = [];
 const lootPickupDistance = 80; // Distancia en píxeles para recoger el botín
@@ -103,22 +108,27 @@ window.addEventListener('keyup', (e) => keys[e.key] = false);
 
 // ⭐ NUEVA LÓGICA: Array de personajes y un índice para ciclar
 const characters = [
-    { name: 'Mage', src: 'char_mage.svg' },
-    { name: 'Sorceress', src: 'char_sorceress.svg' },
-    { name: 'Cleric', src: 'char_cleric.svg' },
-    { name: 'Witch', src: 'char_witch.svg' },
-    { name: 'Ranger', src: 'char_ranger.svg' },
-    { name: 'Forestlord', src: 'char_forestlord.svg' },
-    { name: 'Engineer', src: 'char_engineer.svg' },
-    { name: 'Barbarian', src: 'char_barbarian.svg' }
+    { name: 'Mage', src: { m: 'char_mage_m.svg', f: 'char_mage_f.svg' } },
+    { name: 'Frostsprite', src: { m: 'char_frostsprite_m.svg', f: 'char_frostsprite_f.svg' } },
+    { name: 'Cleric', src: { m: 'char_cleric_m.svg', f: 'char_cleric_f.svg' } }, 
+    { name: 'Witch', src: { m: 'char_witch_m.svg', f: 'char_witch_f.svg' } },
+    { name: 'Ranger', src: { m: 'char_ranger_m.svg', f: 'char_ranger_f.svg' } },
+    { name: 'Druid', src: { m: 'char_druid_m.svg', f: 'char_druid_f.svg' } },
+    { name: 'Engineer', src: { m: 'char_engineer_m.svg', f: 'char_engineer_f.svg' } },
+    { name: 'Barbarian', src: { m: 'char_barbarian_m.svg', f: 'char_barbarian_f.svg' } }
 ];
+
+function updateCharacterSprite() {
+    const newCharacter = characters[characterIndex];
+    playerSprite.src = newCharacter.src[selectedGender];
+}
 
 let characterIndex = 0;
 
 function changeCharacterAndSpell() {
     characterIndex = (characterIndex + 1) % characters.length;
     const newCharacter = characters[characterIndex];
-    playerSprite.src = newCharacter.src;
+    updateCharacterSprite();
     characterSelector.innerText = newCharacter.name;
 
     switch (newCharacter.name) {
@@ -126,7 +136,7 @@ function changeCharacterAndSpell() {
             currentSpell = 'fireball';
             spellSelector.innerText = "Spell: 🔥";
             break;
-        case 'Sorceress':
+        case 'Frostsprite':
             currentSpell = 'frostball';
             spellSelector.innerText = "Spell: ❄️";
             break;
@@ -142,7 +152,7 @@ function changeCharacterAndSpell() {
             currentSpell = 'windshot';
             spellSelector.innerText = "Spell: 💨";
             break;
-        case 'Forestlord':
+        case 'Druid':
             currentSpell = 'natureball';
             spellSelector.innerText = "Spell: 🌿";
             break;
@@ -159,7 +169,20 @@ function changeCharacterAndSpell() {
 
 characterSelector.addEventListener('click', changeCharacterAndSpell);
 
+// ⭐ NUEVO: Eventos para los botones de género
+genderMaleButton.addEventListener('click', () => {
+    selectedGender = 'm';
+    updateCharacterSprite();
+    genderMaleButton.classList.add('active');
+    genderFemaleButton.classList.remove('active');
+});
 
+genderFemaleButton.addEventListener('click', () => {
+    selectedGender = 'f';
+    updateCharacterSprite();
+    genderFemaleButton.classList.add('active');
+    genderMaleButton.classList.remove('active');
+});
 
 // --- Configuración del tablero fijo ---
 const CELL_SIZE = 50;
@@ -1742,6 +1765,7 @@ function gameLoop(time) {
 
 gameLoop();
 autoFire();
+updateCharacterSprite();
 gameContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // ⭐ Cambia de personaje con la barra espaciadora

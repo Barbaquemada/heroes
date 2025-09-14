@@ -597,3 +597,49 @@ body, html {
   top: 50%;
   z-index: 800; /* Asegura que esté por encima de otros elementos */
 }
+
+/* ⭐ NUEVO: Contenedor para el selector de personaje y género */
+.character-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* ⭐ NUEVO: Contenedor para el selector de personaje y género */
+.character-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+Añade el estilo para el selector de género.
+CSS
+
+/* ⭐ NUEVO: Estilos para los botones de género */
+.gender-selector {
+    display: flex;
+    align-items: center;
+    border: 2px solid gold;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.gender-button {
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    padding: 8px 12px;
+    color: gold;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.gender-button:hover {
+    background: rgba(30, 30, 30, 0.9);
+}
+
+.gender-button.active {
+    background: gold;
+    color: black;
+}
